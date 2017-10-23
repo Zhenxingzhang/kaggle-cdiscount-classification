@@ -3,6 +3,10 @@
 __pycache__/
 *.py[cod]
 *$py.class
+test.bson
+train.bson
+test.tfrecords
+train.tfrecords
 
 # C extensions
 *.so
