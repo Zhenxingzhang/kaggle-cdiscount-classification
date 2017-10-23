@@ -43,7 +43,7 @@ def convert_bson_2_record(input_bson_filename, output_tfrecords_filename, train=
                     'img_raw': _bytes_feature(img.tostring())
                 }
                 if 'category_id' in d:
-                    _feature['category_id'] = _int64_feature(d['category_id']
+                    _feature['category_id'] = _int64_feature(d['category_id'])
                 example = tf.train.Example(features=tf.train.Features(feature=_feature))
                 writer.write(example.SerializeToString())
 
