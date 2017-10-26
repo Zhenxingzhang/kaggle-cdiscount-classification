@@ -8,6 +8,9 @@ train.bson
 test.tfrecords
 train.tfrecords
 *.tfrecords
+.idea/
+
+log/
 
 # C extensions
 *.so
