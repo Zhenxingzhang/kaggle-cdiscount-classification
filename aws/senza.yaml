@@ -1,0 +1,164 @@
+# basic information for generating and executing this definition
+SenzaInfo:
+  StackName: zzhang-experiment-gpu
+  Parameters:
+    - ApplicationId:
+        Description: "Application Id as registered in Kio"
+        Default: "zzhang-experiment-app"
+    - DockerSource:
+        Description: "The Docker source e.g.  pierone.stups.zalan.do/monocle/image-models-aws"
+        Default: "pierone.stups.zalan.do/echo/zzhang-experiment-app"
+    - DockerTag:
+        Description: "The Docker source tag"
+        Default: "0.1-SNAPSHOT"
+    - MintBucket:
+        Description: "The mint S3 bucket for OAuth 2.0 credentials"
+        Default: "zalando-stups-mint-{{AccountInfo.AccountID}}-{{AccountInfo.Region}}"
+    - ScalyrAccountKey:
+        Description: "The Scalyr Account Key for logs"
+        Default: "0rVCXmlZATwOtCfiEtAad3qPutBsDYD1wsI5Qq0zlodM-"
+    - JupyterPassword:
+        Description: "The Password required to gain access to your notebook"
+        Default: "abc"
+    - AvailabilityZone:
+        Description: "Availability Zone to create the instance in"
+        Default: "eu-west-1a"
+    - EbsVolumeName:
+        Description: "The value of the 'Name' tag associated with the EBS volume to attach (it's not the EBS volume ID!)"
+        Default: "ebs-zzhang-experiment"
+    - s3Buckets:
+        Description: "Names of S3 buckets (comma separated) to allow read/write access to."
+        Default: "zalando-echo-eu-west-1-datasets"
+    - InstanceType:
+        Description: "The type on GPU instance you want"
+        Default: p2.xlarge
+
+# a list of senza components to apply to the definition
+SenzaComponents:
+
+  # this basic configuration is required for the other components
+  - Configuration:
+      Type: Senza::StupsAutoConfiguration # auto-detect network setup
+      AvailabilityZones:
+        - "{{Arguments.AvailabilityZone}}"
+
+  # will create a launch configuration and auto scaling group with scaling triggers
+  - TensorflowGPU:
+      Type: Senza::TaupageAutoScalingGroup
+      # p2.* or g2.* instances are required for GPU computing. p2.* instances are recommended.
+      InstanceType: "{{Arguments.InstanceType}}"
+      # specify a spot price for the GPU instances
+      SpotPrice: 0.972
+      # Create a security group and IAM role at start up
+      SecurityGroups:
+        - "Fn::GetAtt" : [ "SecurityGroup" , "GroupId" ]
+      IamRoles: [{Ref: Role}]
+      AssociatePublicIpAddress: false # change for standalone deployment in default VPC
+
+      TaupageConfig:
+        application_id: "{{ Arguments.ApplicationId }}"
+        application_version: "{{Arguments.DockerTag}}"
+        runtime: Docker
+        source: "{{Arguments.DockerSource}}:{{Arguments.DockerTag}}"
+        mint_bucket: "{{Arguments.MintBucket}}"
+        scalyr_account_key: "{{Arguments.ScalyrAccountKey}}"
+        root: true
+        ports:
+          8888: 8888
+          6006: 6006
+        application_logrotate_size: 256M
+        application_logrotate_interval: hourly
+        application_logrotate_rotate: 1
+        environment:
+          IMAGE: "{{Arguments.DockerSource}}"
+          SOURCE: "{{Arguments.DockerSource}}:{{Arguments.DockerTag}}"
+          STACK: "{{SenzaInfo.StackName}}-{{SenzaInfo.StackVersion}}"
+          PASSWORD: "{{Arguments.JupyterPassword}}"
+        volumes:
+          ebs:
+            /dev/xvdk: "{{Arguments.EbsVolumeName}}"
+        mounts:
+          /data:
+            partition: /dev/xvdk
+            filesystem: ext4
+            options: noatime,nodiratime,nobarrier
+
+Resources:
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Tensorflow GPU security group"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8888
+          ToPort: 8888
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 6006
+          ToPort: 6006
+          CidrIp: 0.0.0.0/0
+
+  Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: ec2.amazonaws.com
+          Action: sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: AmazonEC2MetadataReadAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+            - Effect: Allow
+              Action: ec2:Describe*
+              Resource: "*"
+        - PolicyName: AmazonEC2EbsVolumeAttachDetach
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+            - Effect: Allow
+              Action: ec2:AttachVolume
+              Resource: "*"
+            - Effect: Allow
+              Action: ec2:DetachVolume
+              Resource: "*"
+        - PolicyName: AmazonEC2ManageTags
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+            - Effect: Allow
+              Action: ec2:DeleteTags
+              Resource: "*"
+        - PolicyName: AmazonCloudwatchPutMetricData
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+            - Effect: Allow
+              Action: cloudwatch:PutMetricData
+              Resource: "*"
+        - PolicyName: MintAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+              Sid: "AllowMintRead"
+              Resource: ["arn:aws:s3:::{{Arguments.MintBucket}}/{{Arguments.ApplicationId}}/*"]
+         #Tweak to actual buckets/paths
+        - PolicyName: S3Access
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+            - Effect: Allow
+              Action: "s3:*"
+              Resource: ["arn:aws:s3:::{{Arguments.s3Buckets}}"]
