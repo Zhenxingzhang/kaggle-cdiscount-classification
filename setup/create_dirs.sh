@@ -6,3 +6,4 @@ mkdir -p /data/frozen
 mkdir -p /data/graphs
 mkdir -p /data/metrics
 mkdir -p /data/summary
+mkdir -p /data/outputs

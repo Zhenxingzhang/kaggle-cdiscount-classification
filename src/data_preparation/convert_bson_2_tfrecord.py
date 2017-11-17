@@ -1,4 +1,5 @@
 #!/usr/bin/python
+import dataset
 
 import bson
 import getopt
@@ -59,5 +60,7 @@ if __name__ == "__main__":
     parser.add_argument('-o', dest="tfrecord_filename", type=str, required=True, help='the output file in tfrecrods format')
     parser.add_argument('-n', dest="total_records", type=int, required=True, help='number of records to convert.')
     args = parser.parse_args()
+
+    one_hot_encoder, _ = dataset.one_hot_label_encoder()
 
     convert_bson_2_record(args.bson_filename, args.tfrecord_filename, args.total_records)

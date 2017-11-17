@@ -7,3 +7,4 @@ scipy
 jupyter
 Pillow
 kaggle-cli
+bson
