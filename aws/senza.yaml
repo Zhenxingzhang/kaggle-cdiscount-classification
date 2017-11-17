@@ -25,7 +25,7 @@ SenzaInfo:
         Default: "eu-west-1a"
     - EbsVolumeName:
         Description: "The value of the 'Name' tag associated with the EBS volume to attach (it's not the EBS volume ID!)"
-        Default: "ebs-zzhang-experiment"
+        Default: "zzhang-experiment-cdiscount"
     - s3Buckets:
         Description: "Names of S3 buckets (comma separated) to allow read/write access to."
         Default: "zalando-echo-eu-west-1-datasets"
