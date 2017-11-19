@@ -7,4 +7,6 @@ scipy
 jupyter
 Pillow
 kaggle-cli
-bson
+pymongo
+scikit-image
+tqdm

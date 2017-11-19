@@ -24,7 +24,7 @@ def _float_feature(value):
     return tf.train.Feature(float_list=tf.train.FloatList(value=value))
 
 
-def convert_bson_2_record(input_bson_filename, output_tfrecords_filename, n=None):
+def convert_bson_2_record(input_bson_filename, output_tfrecords_filename, n=None, inception_feature=False):
     one_hot_encoder, _ = dataset.one_hot_label_encoder(csv_path="data/category_names.csv")
 
     inception_graph = tf.Graph()
@@ -47,17 +47,16 @@ def convert_bson_2_record(input_bson_filename, output_tfrecords_filename, n=None
             n_img = len(d['imgs'])
             for index in range(n_img):
                 img_raw = d['imgs'][index]['picture']
-                img = np.array(imread(io.BytesIO(img_raw)))
-                height = img.shape[0]
-                width = img.shape[1]
+                # img = np.array(imread(io.BytesIO(img_raw)))
+                # height = img.shape[0]
+                # width = img.shape[1]
                 product_id = d['_id']
                 _feature = {
-                    'height': _int64_feature(height),
-                    'width': _int64_feature(width),
                     'product_id': _int64_feature(product_id),
-                    'img_raw': _bytes_feature(img.tostring()),
-                    consts.INCEPTION_OUTPUT_FIELD: _float_feature(get_inception_ouput(img_raw))
+                    'img_raw': _bytes_feature(img_raw)
                 }
+                if inception_feature:
+                    _feature[consts.INCEPTION_OUTPUT_FIELD] = _float_feature(get_inception_ouput(img_raw))
                 if 'category_id' in d:
                     _feature['category_id'] = _int64_feature(int(one_hot_encoder([str(d['category_id'])])[0]))
                 example = tf.train.Example(features=tf.train.Features(feature=_feature))
@@ -76,4 +75,4 @@ if __name__ == "__main__":
     parser.add_argument('-n', dest="total_records", type=int, required=False, help='number of records to convert.')
     args = parser.parse_args()
 
-    convert_bson_2_record(args.bson_filename, args.tfrecord_filename, args.total_records)
+    convert_bson_2_record(args.bson_filename, args.tfrecord_filename, inception_feature=True, n=args.total_records)

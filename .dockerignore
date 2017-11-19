@@ -1,1 +1,4 @@
 .ipynb_checkpoints
+*.bson
+*.tfrecords
+.DS_Store
