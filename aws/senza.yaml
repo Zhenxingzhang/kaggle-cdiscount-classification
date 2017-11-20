@@ -48,7 +48,7 @@ SenzaComponents:
       # p2.* or g2.* instances are required for GPU computing. p2.* instances are recommended.
       InstanceType: "{{Arguments.InstanceType}}"
       # specify a spot price for the GPU instances
-      SpotPrice: 0.972
+      SpotPrice: 1.0
       # Create a security group and IAM role at start up
       SecurityGroups:
         - "Fn::GetAtt" : [ "SecurityGroup" , "GroupId" ]
