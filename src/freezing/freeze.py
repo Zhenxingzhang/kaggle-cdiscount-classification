@@ -16,7 +16,7 @@ def _freeze_graph(graph_path, checkpoint_path, output_node_names, output_path):
         output_node_names, restore_op_name, filename_tensor_name,
         output_path, False, '', '')
 
-    print('Frozen model saved to ' + output_path)
+    print('Frozen models saved to ' + output_path)
 
     return saved_path
 
