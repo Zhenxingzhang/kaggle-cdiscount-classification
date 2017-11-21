@@ -62,10 +62,3 @@ if __name__ == '__main__':
         _, output_probs, _, _ = denseNN.denseNNModel(
             x, consts.HEAD_MODEL_LAYERS, gamma=0.01)
         infer_test(consts.CURRENT_MODEL_NAME, output_probs, x)
-
-
-
-
-
-
-
