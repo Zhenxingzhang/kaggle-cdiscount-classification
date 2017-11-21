@@ -68,9 +68,9 @@ def inception_model():
                                                      consts.INCEPTION_INPUT_TENSOR,
                                                      consts.INCEPTION_OUTPUT_TENSOR])
 
-    def forward(sess, image_raw):
-        out = sess.run(tensors[consts.INCEPTION_OUTPUT_TENSOR], {tensors[consts.INCEPTION_INPUT_TENSOR]: image_raw})
-        return out
+    def forward(_sess, _image_raw):
+        _out = _sess.run(tensors[consts.INCEPTION_OUTPUT_TENSOR], {tensors[consts.INCEPTION_INPUT_TENSOR]: _image_raw})
+        return _out
 
     return forward
 

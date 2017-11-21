@@ -4,7 +4,6 @@ from sklearn import preprocessing
 from src.common import paths
 import tensorflow as tf
 from src.common import consts
-from tf_record_utils import read_record_to_queue
 
 
 def read_record_to_queue(tf_record_name, shapes, preproc_func=None, num_epochs=10, batch_size=32,
@@ -25,7 +24,7 @@ def read_record_to_queue(tf_record_name, shapes, preproc_func=None, num_epochs=1
         _, serialized_example = reader.read(filename_queue_)
         # The serialized example is converted back to actual values.
         # One needs to describe the format of the objects to be returned
-        features = tf.parse_single_example(
+        _features = tf.parse_single_example(
             serialized_example,
             features={
                 # We know the length of both fields. If not the
@@ -36,12 +35,12 @@ def read_record_to_queue(tf_record_name, shapes, preproc_func=None, num_epochs=1
                 consts.LABEL_ONE_HOT_FIELD: tf.FixedLenFeature([], tf.int64)
             })
 
-        image_raw = tf.decode_raw(features['img_raw'], tf.uint8)
-        label = tf.cast(features[consts.LABEL_ONE_HOT_FIELD], tf.int64)
+        image_raw = tf.decode_raw(_features['img_raw'], tf.uint8)
+        _label = tf.cast(_features[consts.LABEL_ONE_HOT_FIELD], tf.int64)
 
-        image = tf.reshape(image_raw, shapes)
-        preproc_image = preproc_func(image) if preproc_func is not None else image
-        return label, preproc_image
+        _image = tf.reshape(image_raw, shapes)
+        _preproc_image = preproc_func(_image) if preproc_func is not None else _image
+        return _label, _preproc_image
 
     # returns symbolic label and image
     label, image = read_and_decode_single_example(filename_queue)
@@ -96,20 +95,20 @@ def features_dataset():
 
 
 def one_hot_label_encoder(csv_path=paths.CATEGORIES):
-    category_labels = pd.read_csv(csv_path, dtype={'category_id': np.str})
-    lb = preprocessing.LabelBinarizer()
-    lb.fit(category_labels['category_id'])
+    _category_labels = pd.read_csv(csv_path, dtype={'category_id': np.str})
+    _lb = preprocessing.LabelBinarizer()
+    _lb.fit(_category_labels['category_id'])
 
     def find_max_idx(lb_vec):
-        lb_vector = lb_vec.reshape(-1).tolist()
-        return lb_vector.index(max(lb_vector))
+        _lb_vector = lb_vec.reshape(-1).tolist()
+        return _lb_vector.index(max(_lb_vector))
 
     def encode(lbs_str):
-        lbs_vector = np.asarray(lb.transform(lbs_str), dtype=np.float32)
-        return np.apply_along_axis(find_max_idx, 1, lbs_vector)
+        _lbs_vector = np.asarray(_lb.transform(lbs_str), dtype=np.float32)
+        return np.apply_along_axis(find_max_idx, 1, _lbs_vector)
 
     def decode(one_hots):
-        return np.asarray(lb.inverse_transform(one_hots), dtype=np.str)
+        return np.asarray(_lb.inverse_transform(one_hots), dtype=np.str)
 
     return encode, decode
 
