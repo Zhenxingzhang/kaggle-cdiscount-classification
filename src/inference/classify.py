@@ -16,12 +16,12 @@ def infer(model_name, img_raw):
     with tf.Graph().as_default(), tf.Session().as_default() as sess:
         tensors = freeze.unfreeze_into_current_graph(
             os.path.join(paths.FROZEN_MODELS_DIR, model_name + '.pb'),
-            tensor_names=[consts.INCEPTION_INPUT_TENSOR, consts.OUTPUT_TENSOR_NAME])
+            tensor_names=[consts.INCEPTION_INPUT_STRING_TENSOR, consts.OUTPUT_TENSOR_NAME])
 
         _, one_hot_decoder = dataset.one_hot_label_encoder()
 
         probs = sess.run(tensors[consts.OUTPUT_TENSOR_NAME],
-                         feed_dict={tensors[consts.INCEPTION_INPUT_TENSOR]: img_raw})
+                         feed_dict={tensors[consts.INCEPTION_INPUT_STRING_TENSOR]: img_raw})
 
         breeds = one_hot_decoder(np.identity(consts.CLASSES_COUNT)).reshape(-1)
 

@@ -2,3 +2,4 @@
 *.bson
 *.tfrecords
 .DS_Store
+.pyc

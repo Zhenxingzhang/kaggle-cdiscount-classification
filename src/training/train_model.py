@@ -14,7 +14,7 @@ from __future__ import print_function
 import tensorflow as tf
 import numpy as np
 import time
-
+from src.data_preparation.dataset import read_record_to_queue
 
 
 

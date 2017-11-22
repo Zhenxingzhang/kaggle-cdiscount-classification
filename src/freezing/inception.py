@@ -7,11 +7,13 @@ from sklearn import preprocessing
 import os
 import re
 import numpy as np
-
+from skimage.data import imread
+import io
+from src.common.paths import INCEPTION_MODEL_DIR
 
 class NodeLookup(object):
     def __init__(self,
-                 model_dir="data/frozen/inception/",
+                 model_dir=INCEPTION_MODEL_DIR,
                  label_lookup_path=None,
                  uid_lookup_path=None):
         if not label_lookup_path:
@@ -65,11 +67,26 @@ class NodeLookup(object):
 def inception_model():
     tensors = freeze.unfreeze_into_current_graph(paths.IMAGENET_GRAPH_DEF,
                                                  tensor_names=[
-                                                     consts.INCEPTION_INPUT_TENSOR,
+                                                     consts.INCEPTION_INPUT_STRING_TENSOR,
                                                      consts.INCEPTION_OUTPUT_TENSOR])
 
     def forward(_sess, _image_raw):
-        _out = _sess.run(tensors[consts.INCEPTION_OUTPUT_TENSOR], {tensors[consts.INCEPTION_INPUT_TENSOR]: _image_raw})
+        _out = _sess.run(tensors[consts.INCEPTION_OUTPUT_TENSOR],
+                         {tensors[consts.INCEPTION_INPUT_STRING_TENSOR]: _image_raw})
+        return _out
+
+    return forward
+
+
+def inception_image_model():
+    tensors = freeze.unfreeze_into_current_graph(paths.IMAGENET_GRAPH_DEF,
+                                                 tensor_names=[
+                                                     consts.INCEPTION_INPUT_ARRAY_TENSOR,
+                                                     consts.INCEPTION_OUTPUT_TENSOR])
+
+    def forward(_sess, _image_array):
+        _out = _sess.run(tensors[consts.INCEPTION_OUTPUT_TENSOR],
+                         {tensors[consts.INCEPTION_INPUT_ARRAY_TENSOR]: _image_array})
         return _out
 
     return forward
@@ -78,11 +95,24 @@ def inception_model():
 def inception_inference():
     tensors = freeze.unfreeze_into_current_graph(paths.IMAGENET_GRAPH_DEF,
                                                  tensor_names=[
-                                                     consts.INCEPTION_INPUT_TENSOR,
+                                                     consts.INCEPTION_INPUT_STRING_TENSOR,
                                                      "softmax:0"])
 
     def forward(sess, image_raw):
-        label_vect = sess.run(tensors["softmax:0"], {tensors[consts.INCEPTION_INPUT_TENSOR]: image_raw})
+        label_vect = sess.run(tensors["softmax:0"], {tensors[consts.INCEPTION_INPUT_STRING_TENSOR]: image_raw})
+        return label_vect
+
+    return forward
+
+
+def inception_image_inference():
+    tensors = freeze.unfreeze_into_current_graph(paths.IMAGENET_GRAPH_DEF,
+                                                 tensor_names=[
+                                                     consts.INCEPTION_INPUT_ARRAY_TENSOR,
+                                                     "softmax:0"])
+
+    def forward(sess, _img):
+        label_vect = sess.run(tensors["softmax:0"], {tensors[consts.INCEPTION_INPUT_ARRAY_TENSOR]: _img})
         return label_vect
 
     return forward
@@ -91,22 +121,29 @@ def inception_inference():
 if __name__ == '__main__':
 
     with tf.Session().as_default() as sess:
-        image_raw = tf.read_file('images/airedale.jpg').eval()
+        image_raw_1 = tf.read_file('data/images/cat.png').eval()
+        img1 = np.array(imread(io.BytesIO(image_raw_1)))[:, :, 0:3]
+
+        image_raw_2 = tf.read_file('data/images/cat.png').eval()
+        img2 = np.array(imread(io.BytesIO(image_raw_2)))[:, :, 0:3]
+
+        imgs = np.array([img1, img2])
 
     g = tf.Graph()
     sess = tf.Session(graph=g)
 
     with g.as_default():
-        model = inception_inference()
+        model = inception_image_inference()
 
     with g.as_default():
-        out = model(sess, image_raw)
+        out = model(sess, imgs)
         predictions = np.squeeze(out)
 
-        node_lookup = NodeLookup()
-        top_5 = predictions.argsort()[-5:][::-1]
-        for node_id in top_5:
-            human_string = node_lookup.id_to_string(node_id)
-            score = predictions[node_id]
-            print('%s (score = %.5f)' % (human_string, score))
+        for p in predictions:
+            node_lookup = NodeLookup()
+            top_5 = p.argsort()[-5:][::-1]
+            for node_id in top_5:
+                human_string = node_lookup.id_to_string(node_id)
+                score = p[node_id]
+                print('%s (score = %.5f)' % (human_string, score))
 
