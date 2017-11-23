@@ -35,8 +35,9 @@ def train_dev_split(sess, tf_records_path, dev_set_size=2000, batch_size=64, tra
 
 
 def error(x, output_probs, name):
-    expected = tf.placeholder(tf.float32, shape=(consts.CLASSES_COUNT, None), name='expected')
-    exp_vs_output = tf.equal(tf.argmax(output_probs, axis=0), tf.argmax(expected, axis=0))
+    expected = tf.placeholder(tf.float32, shape=(None, consts.CLASSES_COUNT), name='expected')
+    # exp_vs_output = tf.equal(tf.argmax(output_probs, axis=0), tf.argmax(expected, axis=0))
+    exp_vs_output = tf.equal(tf.argmax(output_probs, 1), tf.argmax(expected, 1))
     accuracy = 1. - tf.reduce_mean(tf.cast(exp_vs_output, dtype=tf.float32))
     summaries = [tf.summary.scalar(name, accuracy)]
 
@@ -56,7 +57,7 @@ def make_model_name(prefix, batch_size, learning_rate):
 
 
 if __name__ == '__main__':
-    BATCH_SIZE = 64
+    BATCH_SIZE = 2
     EPOCHS_COUNT = 5000
     LEARNING_RATE = 0.0001
 
@@ -77,13 +78,13 @@ if __name__ == '__main__':
         train_sample_inception_output = train_sample[consts.INCEPTION_OUTPUT_FIELD]
         train_sample_y_one_hot = train_sample[consts.LABEL_ONE_HOT_FIELD]
 
-        x = tf.placeholder(dtype=tf.float32, shape=(consts.INCEPTION_CLASSES_COUNT, None), name="x")
-        cost, output_probs, y, nn_summaries = denseNN.denseNNModel(
-            x, consts.HEAD_MODEL_LAYERS, gamma=0.001)
+        x = tf.placeholder(dtype=tf.float32, shape=(None, consts.INCEPTION_CLASSES_COUNT), name="x")
+        cost, output_probs, y, nn_summaries = denseNN.dense_neural_network(x,
+            consts.HEAD_MODEL_LAYERS, gamma=0.001)
         optimizer = tf.train.AdamOptimizer(learning_rate=LEARNING_RATE).minimize(cost)
 
-        dev_error_eval = error(x, output_probs, name='test_error')
-        train_error_eval = error(x, output_probs, name='train_error')
+        # dev_error_eval = error(x, output_probs, name='test_error')
+        # train_error_eval = error(x, output_probs, name='train_error')
 
         nn_merged_summaries = tf.summary.merge(nn_summaries)
         tf.global_variables_initializer().run()
@@ -100,19 +101,19 @@ if __name__ == '__main__':
             batch_y = batch_features[consts.LABEL_ONE_HOT_FIELD]
 
             _, summary = sess.run([optimizer, nn_merged_summaries], feed_dict={
-                                      x: batch_inception_output.T,
-                                      y: batch_y.T
+                                      x: batch_inception_output,
+                                      y: batch_y
                                   })
 
             writer.add_summary(summary, epoch)
 
-            _, dev_summaries = dev_error_eval(sess, dev_set_inception_output.T, dev_set_y_one_hot.T)
-            writer.add_summary(dev_summaries, epoch)
-
-            _, train_sample_summaries = train_error_eval(sess, train_sample_inception_output.T, train_sample_y_one_hot.T)
-            writer.add_summary(train_sample_summaries, epoch)
-
-            writer.flush()
+            # _, dev_summaries = dev_error_eval(sess, dev_set_inception_output.T, dev_set_y_one_hot.T)
+            # writer.add_summary(dev_summaries, epoch)
+            #
+            # _, train_sample_summaries = train_error_eval(sess, train_sample_inception_output.T, train_sample_y_one_hot.T)
+            # writer.add_summary(train_sample_summaries, epoch)
+            #
+            # writer.flush()
 
             if epoch % 10 == 0 or epoch == EPOCHS_COUNT:
                 saver.save(sess, os.path.join(paths.CHECKPOINTS_DIR, model_name), latest_filename=model_name + '_latest')
