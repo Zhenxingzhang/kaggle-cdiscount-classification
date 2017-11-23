@@ -11,11 +11,11 @@ OUTPUT_TENSOR_NAME = OUTPUT_NODE_NAME + ':0'
 HEAD_INPUT_NODE_NAME = 'x'
 HEAD_INPUT_TENSOR_NAME = HEAD_INPUT_NODE_NAME + ':0'
 
-DEV_SET_SIZE = 2
-TRAIN_SAMPLE_SIZE = 2
+DEV_SET_SIZE = 300
+TRAIN_SAMPLE_SIZE = 3000
 
 # name of the models being referenced by all other scripts
-CURRENT_MODEL_NAME = 'stanford_5_64_0001'
+CURRENT_MODEL_NAME = 'nn_2_2048_1024_5000'
 # sets up number of layers and number of units in each layer for
 # the "head" dense neural network stacked on top of the Inception
 # pre-trained models.

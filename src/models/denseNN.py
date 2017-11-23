@@ -60,7 +60,7 @@ def _fc_layer(layer_name, input_tensor, no_filters, act=tf.nn.relu,
         return activation
 
 
-def dense_neural_network(input_node, layers, gamma=0.1):
+def dense_neural_network(layers, gamma=0.1):
     n_x = layers[0]
     n_y = layers[-1]
     L = len(layers)
@@ -69,12 +69,11 @@ def dense_neural_network(input_node, layers, gamma=0.1):
 
     with tf.name_scope("placeholders"):
         # x = tf.placeholder(dtype=tf.float32, shape=(n_x, None), name="x")
-        # a = tf.placeholder(dtype=tf.float32, shape=(None, n_x), name="x")
+        x = tf.placeholder(dtype=tf.float32, shape=(None, n_x), name="x")
         y = tf.placeholder(dtype=tf.int32, shape=(None), name="y")
 
-    a = input_node
-
     with tf.name_scope("hidden_layers"):
+        a = x
         for l in range(1, len(layers) - 1):
             # W = tf.Variable(np.random.randn(layers[l], layers[l - 1]) / tf.sqrt(layers[l - 1] * 1.0),
             # dtype=tf.float32, name="W" + str(l))
@@ -100,11 +99,11 @@ def dense_neural_network(input_node, layers, gamma=0.1):
     z = tf.matmul(a, W) + b
 
     with tf.name_scope("cost"):
-        cost = tf.reduce_mean(
+        cost = gamma * tf.reduce_mean(
             tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=z))  # +\
         # gamma * tf.reduce_sum([tf.nn.l2_loss(w) for w in Ws])
         summaries.append(tf.summary.scalar('cost', cost))
 
     output = tf.nn.softmax(z, name=consts.OUTPUT_NODE_NAME)
 
-    return cost, output, y, summaries
+    return cost, output, x, y, summaries
