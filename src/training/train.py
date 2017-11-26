@@ -1,7 +1,9 @@
 import os
-
+import sys
 import pyprind
 import tensorflow as tf
+import yaml
+import argparse
 
 from src.common import consts
 from src.data_preparation import dataset
@@ -9,7 +11,7 @@ from src.models import denseNN
 from src.common import paths
 
 
-def train_dev_split(sess, tf_records_path, dev_set_size=2000, batch_size=64, train_sample_size=2000):
+def train_dev_split(sess_, tf_records_path, dev_set_size=2000, batch_size=64, train_sample_size=2000):
     ds_, filename = dataset.features_dataset()
 
     ds = ds_.shuffle(buffer_size=20000)
@@ -27,9 +29,9 @@ def train_dev_split(sess, tf_records_path, dev_set_size=2000, batch_size=64, tra
 
     dev_ds_iter = ds.take(dev_set_size).batch(dev_set_size).make_initializable_iterator()
 
-    sess.run(train_ds_iter.initializer, feed_dict={filename: tf_records_path})
-    sess.run(dev_ds_iter.initializer, feed_dict={filename: tf_records_path})
-    sess.run(train_sample_ds_iter.initializer, feed_dict={filename: tf_records_path})
+    sess_.run(train_ds_iter.initializer, feed_dict={filename: tf_records_path})
+    sess_.run(dev_ds_iter.initializer, feed_dict={filename: tf_records_path})
+    sess_.run(train_sample_ds_iter.initializer, feed_dict={filename: tf_records_path})
 
     return train_ds_iter.get_next(), dev_ds_iter.get_next(), train_sample_ds_iter.get_next()
 
@@ -43,9 +45,9 @@ def accuracy(x_, output_probs_, name):
 
     merged_summaries = tf.summary.merge(summaries)
 
-    def run(sess, output, expected_):
-        acc, summary_acc = sess.run([accuracy_, merged_summaries],
-                                    feed_dict={x_: output, expected: expected_})
+    def run(sess_, features, expected_):
+        acc, summary_acc = sess_.run([accuracy_, merged_summaries],
+                                     feed_dict={x_: features, expected: expected_})
 
         return acc, summary_acc
 
@@ -57,25 +59,46 @@ def make_model_name(prefix, batch_size, learning_rate):
 
 
 if __name__ == '__main__':
-    BATCH_SIZE = 64
-    EPOCHS_COUNT = 5000
-    LEARNING_RATE = 0.0001
 
-    model_name = consts.CURRENT_MODEL_NAME
+    parser = argparse.ArgumentParser(description='Default argument')
+    parser.add_argument('-c', dest="config_filename", type=str, required=False, help='the config file name')
+    args = parser.parse_args()
+
+    if args.config_filename:
+        with open(args.config_filename, 'r') as yml_file:
+            cfg = yaml.load(yml_file)
+
+        BATCH_SIZE = cfg["TRAIN"]["BATCH_SIZE"]
+        EPOCHS_COUNT = cfg["TRAIN"]["EPOCHS_COUNT"]
+        LEARNING_RATE = cfg["TRAIN"]["LEARNING_RATE"]
+        TRAIN_TF_RECORDS = cfg["TRAIN"]["TRAIN_TF_RECORDS"]
+
+        MODEL_NAME = cfg["MODEL"]["MODEL_NAME"]
+        MODEL_LAYERS = cfg["MODEL"]["MODEL_LAYERS"]
+    else:
+        BATCH_SIZE = 128
+        EPOCHS_COUNT = 50000
+        LEARNING_RATE = 0.0001
+        TRAIN_TF_RECORDS = paths.TRAIN_TF_RECORDS
+
+        MODEL_NAME = consts.CURRENT_MODEL_NAME
+        MODEL_LAYERS = consts.HEAD_MODEL_LAYERS
+
+    print(MODEL_LAYERS[0])
 
     with tf.Graph().as_default() as g, tf.Session().as_default() as sess:
         next_train_batch, get_dev_ds, get_train_sample_ds = \
-            train_dev_split(sess, paths.TRAIN_TF_RECORDS,
+            train_dev_split(sess, TRAIN_TF_RECORDS,
                             dev_set_size=consts.DEV_SET_SIZE,
                             batch_size=BATCH_SIZE,
                             train_sample_size=consts.TRAIN_SAMPLE_SIZE)
 
         dev_set = sess.run(get_dev_ds)
-        dev_set_inception_output = dev_set[consts.INCEPTION_OUTPUT_FIELD]
+        dev_set_inception_feature = dev_set[consts.INCEPTION_OUTPUT_FIELD]
         dev_set_y_one_hot = dev_set[consts.LABEL_ONE_HOT_FIELD]
 
         train_sample = sess.run(get_train_sample_ds)
-        train_sample_inception_output = train_sample[consts.INCEPTION_OUTPUT_FIELD]
+        train_sample_inception_feature = train_sample[consts.INCEPTION_OUTPUT_FIELD]
         train_sample_y_one_hot = train_sample[consts.LABEL_ONE_HOT_FIELD]
 
         # x = tf.placeholder(dtype=tf.float32, shape=(None, consts.INCEPTION_CLASSES_COUNT), name="x")
@@ -89,7 +112,7 @@ if __name__ == '__main__':
         nn_merged_summaries = tf.summary.merge(nn_summaries)
         tf.global_variables_initializer().run()
 
-        writer = tf.summary.FileWriter(os.path.join(paths.SUMMARY_DIR, model_name))
+        writer = tf.summary.FileWriter(os.path.join(paths.SUMMARY_DIR, MODEL_NAME))
 
         bar = pyprind.ProgBar(EPOCHS_COUNT, update_interval=1, width=60)
 
@@ -107,15 +130,15 @@ if __name__ == '__main__':
 
             writer.add_summary(summary, epoch)
 
-            _, dev_summaries = dev_accu_eval(sess, dev_set_inception_output, dev_set_y_one_hot)
+            _, dev_summaries = dev_accu_eval(sess, dev_set_inception_feature, dev_set_y_one_hot)
             writer.add_summary(dev_summaries, epoch)
 
-            _, train_sample_summaries = train_accu_eval(sess, train_sample_inception_output, train_sample_y_one_hot)
+            _, train_sample_summaries = train_accu_eval(sess, train_sample_inception_feature, train_sample_y_one_hot)
             writer.add_summary(train_sample_summaries, epoch)
 
             writer.flush()
 
             if epoch % 10 == 0 or epoch == EPOCHS_COUNT:
-                saver.save(sess, os.path.join(paths.CHECKPOINTS_DIR, model_name), latest_filename=model_name + '_latest')
+                saver.save(sess, os.path.join(paths.CHECKPOINTS_DIR, MODEL_NAME), latest_filename=MODEL_NAME + '_latest')
 
             bar.update()

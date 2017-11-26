@@ -1,26 +1,12 @@
-"""
-Model file for vgg like model for tiny imagenet using TFrecords, queues, and tensorboard
-
-Assume tfrecords already created (see tfrecords_and_queues.py)
-
-NOTE: There are some key features missing from the this single file example. Most notable is the lack of evaluation.
-When working with tfrecords and queues, tensorflow examples suggest separate graphs running training and inference.
-The avoids the complication of swapping out the data loading op of just one graph. To achieve this we must introduce
-a saver to periodically store the learned parameters and run the evaluation script over this checkpoints
-(see https://github.com/tensorflow/tensorflow/tree/r0.7/tensorflow/models/image/cifar10 for a sample)
-"""
-from __future__ import print_function
-
 import tensorflow as tf
-import numpy as np
 import time
-from src.data_preparation.dataset import read_record_to_queue
+import numpy as np
+import argparse
+import yaml
+from src.common import consts, paths
+from src.training.train import train_dev_split
+import os
 
-
-
-###
-# models and variables
-###
 
 # utility functions for weight and bias init
 def weight_variable(shape):
@@ -31,16 +17,6 @@ def weight_variable(shape):
 def bias_variable(shape):
     initial = tf.constant(0.1, shape=shape)
     return tf.Variable(initial)
-
-
-# conv and pool operations
-def conv2d(x, W):
-    return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME')
-
-
-def max_pool_2x2(x):
-    return tf.nn.max_pool(x, ksize=[1, 2, 2, 1],
-                          strides=[1, 2, 2, 1], padding='SAME')
 
 
 # tensorboard + layer utilities
@@ -57,15 +33,12 @@ def variable_summaries(var, name):
         tf.summary.histogram(name, var)
 
 
-def fc_layer(input_tensor, num_units, layer_name, act=tf.nn.relu, dropout=True, keep_prob=None):
+def fc_layer(input_tensor, input_dim, output_dim, layer_name, act=tf.nn.relu):
     """Reusable code for making a simple neural net layer.
 
     It does a matrix multiply, bias add, and then uses relu to nonlinearize.
     It also sets up name scoping so that the resultant graph is easy to read,
     and adds a number of summary ops.
-
-    Here we read the shape of the incoming tensor (flatten if needed) and use it
-    to set shapes of variables
     """
 
     # Adding a name scope ensures logical grouping of the layers in the graph.
@@ -75,175 +48,119 @@ def fc_layer(input_tensor, num_units, layer_name, act=tf.nn.relu, dropout=True, 
         if len(input_shape) == 4:
             ndims = np.int(np.product(input_shape[1:]))
             input_tensor = tf.reshape(input_tensor, [-1, ndims])
-        elif len(input_shape) == 2:
-            ndims = input_shape[-1].value
-        else:
-            raise RuntimeError('Strange input tensor shape: {}'.format(input_shape))
         # This Variable will hold the state of the weights for the layer
         with tf.name_scope('weights'):
-            weights = weight_variable([ndims, num_units])
+            weights = weight_variable([input_dim, output_dim])
             variable_summaries(weights, layer_name + '/weights')
         with tf.name_scope('biases'):
-            biases = bias_variable([num_units])
+            biases = bias_variable([output_dim])
             variable_summaries(biases, layer_name + '/biases')
         with tf.name_scope('Wx_plus_b'):
             preactivate = tf.matmul(input_tensor, weights) + biases
             tf.summary.histogram(layer_name + '/pre_activations', preactivate)
         activations = act(preactivate, 'activation')
         tf.summary.histogram(layer_name + '/activations', activations)
-        if dropout:
-            activations_drop = tf.nn.dropout(activations, keep_prob)
-            return activations_drop
 
     return activations
 
 
-def conv_pool_layer(input_tensor, filter_size, num_filters, layer_name, act=tf.nn.relu, pool=True):
-    """Reusable code for making a simple conv_pool layer.
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Default argument')
+    parser.add_argument('-c', dest="config_filename", type=str, required=False, help='the config file name')
+    args = parser.parse_args()
 
-    It does a 2D convolution, bias add, and then uses relu to nonlinearize, (optionally) followed by 2x2 max pooling
-    It also sets up name scoping so that the resultant graph is easy to read,
-    and adds a number of summary ops.
+    if args.config_filename:
+        with open(args.config_filename, 'r') as yml_file:
+            cfg = yaml.load(yml_file)
 
-    Here we read the shape of the incoming tensor and use it to set shapes of variables
-    """
-    # Adding a name scope ensures logical grouping of the layers in the graph.
-    with tf.name_scope(layer_name):
-        # This Variable will hold the state of the weights for the layer
-        patches_in = input_tensor.get_shape()[-1].value
+        BATCH_SIZE = cfg["TRAIN"]["BATCH_SIZE"]
+        EPOCHS_COUNT = cfg["TRAIN"]["EPOCHS_COUNT"]
+        LEARNING_RATE = cfg["TRAIN"]["LEARNING_RATE"]
+        TRAIN_TF_RECORDS = cfg["TRAIN"]["TRAIN_TF_RECORDS"]
 
-        with tf.name_scope('weights'):
-            weights = weight_variable([filter_size, filter_size, patches_in, num_filters])
-            variable_summaries(weights, layer_name + '/weights')
-        with tf.name_scope('biases'):
-            biases = bias_variable([num_filters])
-            variable_summaries(biases, layer_name + '/biases')
-        with tf.name_scope('Wx_plus_b'):
-            preactivate = conv2d(input_tensor, weights) + biases
-            # tf.summary.histogram(layer_name + '/pre_activations', preactivate)
-        activations = act(preactivate, 'activation')
-        # tf.summary.histogram(layer_name + '/activations', activations)
-        if pool:
-            pooled_activations = max_pool_2x2(activations)
-            # tf.summary.histogram(layer_name + '/pooled_activations', pooled_activations)
+        MODEL_NAME = cfg["MODEL"]["MODEL_NAME"]
+        MODEL_LAYERS = cfg["MODEL"]["MODEL_LAYERS"]
+    else:
+        BATCH_SIZE = 128
+        EPOCHS_COUNT = 50000
+        LEARNING_RATE = 0.0001
+        TRAIN_TF_RECORDS = paths.TRAIN_TF_RECORDS
 
-            return pooled_activations
-        else:
-            return activations
+        MODEL_NAME = consts.CURRENT_MODEL_NAME
+        MODEL_LAYERS = consts.HEAD_MODEL_LAYERS
 
+    # define model
+    x = tf.placeholder(dtype=tf.float32, shape=(None, MODEL_LAYERS[0]), name="x")
+    y = tf.placeholder(dtype=tf.int32, shape=(None), name="y")
 
-# any preprocessing you need can be added here, e.g. mean substraction, crops, flips etc.
-def pre_process_ims(image):
-    # return tf.reshape(tf.cast(image, tf.float32) / 255., (128, 128, 3))
-    return tf.cast(image, tf.float32) / 255.
+    y_ = fc_layer(x, input_dim=2048, output_dim=5270, layer_name='FC_1', act=tf.identity)
 
+    ###
+    # loss and eval functions
+    ###
 
-def train(filename):
-    BATCH_SIZE = 32
-    NUM_STEPS = 100000
-    IMAGE_WIDTH = 180
-    IMAGE_HEIGHT = 180
-
-    with tf.name_scope('data'):
-        # shapes = {"image": (IMAGE_WIDTH, IMAGE_HEIGHT, 3), "label": 1}
-        shapes = np.array([IMAGE_WIDTH, IMAGE_HEIGHT, 3])
-        images_batch, labels_batch = read_record_to_queue(filename, shapes,
-                                                          preproc_func=pre_process_ims, num_epochs=None,
-                                                          batch_size=BATCH_SIZE)
-        # Display the training images in the visualizer.
-        tf.summary.image('images', images_batch)
-
-    with tf.name_scope('dropout_keep_prob'):
-        keep_prob = tf.placeholder(tf.float32)  # use keep_prob as a placeholder so can modify later
-
-    # MODEL
-    out_1 = conv_pool_layer(images_batch, filter_size=3, num_filters=16, layer_name='conv_1', pool=False)
-    out_2 = conv_pool_layer(out_1, filter_size=3, num_filters=16, layer_name='conv_pool_2')
-    out_3 = conv_pool_layer(out_2, filter_size=3, num_filters=16, layer_name='conv_3', pool=False)
-    out_4 = conv_pool_layer(out_3, filter_size=3, num_filters=32, layer_name='conv_pool_4')
-    out_5 = conv_pool_layer(out_4, filter_size=3, num_filters=32, layer_name='conv_pool_5')
-    out_6 = conv_pool_layer(out_5, filter_size=3, num_filters=64, layer_name='conv_pool_6')
-    out_7 = fc_layer(out_6, num_units=128, layer_name='FC_1', keep_prob=keep_prob, dropout=True)
-    out_8 = fc_layer(out_7, num_units=256, layer_name='FC_2', keep_prob=keep_prob, dropout=True)
-    y_pred = fc_layer(out_8, num_units=200, layer_name='softmax', act=tf.identity, dropout=False)
-
-    # for monitoring
-    with tf.name_scope('loss'):
-        loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=tf.squeeze(labels_batch), logits=y_pred)
-        loss_mean = tf.reduce_mean(loss)
-        tf.summary.scalar('loss', loss_mean)
+    with tf.name_scope('cross_entropy'):
+        cross_entropy_i = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=y_)
+        cross_entropy = tf.reduce_mean(cross_entropy_i)
+        tf.summary.scalar('cross_entropy', cross_entropy)
 
     with tf.name_scope('accuracy'):
         with tf.name_scope('correct_prediction'):
-            correct_prediction = tf.equal(tf.argmax(y_pred, 1), tf.squeeze(labels_batch))
+            correct_prediction = tf.equal(tf.argmax(y,1), tf.argmax(y_,1))
         with tf.name_scope('accuracy'):
             accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
         tf.summary.scalar('accuracy', accuracy)
 
-    train_op = tf.train.AdamOptimizer(1e-4).minimize(loss_mean)
+    # training step (NOTE: improved optimiser and lower learning rate; needed for more complex model)
+    with tf.name_scope('train'):
+        optimizer = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
 
-    sess = tf.Session()
-    summary_op = tf.summary.merge_all()
-    train_writer = tf.summary.FileWriter('log/9layer/train', sess.graph)
+    # Merge all the summaries and write them out to /summaries/conv (by default)
+    merged = tf.summary.merge_all()
 
-    init = tf.global_variables_initializer()
-    sess.run(init)
-    tf.train.start_queue_runners(sess=sess)
+    with tf.Graph().as_default() as g, tf.Session().as_default() as sess:
+        next_train_batch, get_dev_ds, get_train_sample_ds = \
+            train_dev_split(sess, TRAIN_TF_RECORDS,
+                            dev_set_size=consts.DEV_SET_SIZE,
+                            batch_size=BATCH_SIZE,
+                            train_sample_size=consts.TRAIN_SAMPLE_SIZE)
 
-    t0 = time.time()
-    loss_avg = 0
-    for i in range(NUM_STEPS):
-        # pass it in through the feed_dict
-        _, loss_val = sess.run([train_op, loss_mean], feed_dict={keep_prob: 0.8})
-        loss_avg += loss_val
-        if i % 10 == 0:
-            time_per_batch = (time.time() - t0) / 10.0
-            time_per_image = time_per_batch / BATCH_SIZE
-            loss_avg /= 10.0
-            print("Step: {}, Mean Loss: {}, Time per batch: {:.2f}, Time per image: {:.4f}".format(i, loss_avg,
-                                                                                                   time_per_batch,
-                                                                                                   time_per_image))
-            loss_avg = 0
-            t0 = time.time()
+        dev_set = sess.run(get_dev_ds)
+        dev_set_inception_feature = dev_set[consts.INCEPTION_OUTPUT_FIELD]
+        dev_set_y_one_hot = dev_set[consts.LABEL_ONE_HOT_FIELD]
 
-        if i % 50 == 0:
-            t1 = time.time()
-            summary = sess.run(summary_op, feed_dict={keep_prob: 0.8})
-            train_writer.add_summary(summary, i)
-            print("Wrote summary in {:.2f} s".format(time.time() - t1))
+        train_sample = sess.run(get_train_sample_ds)
+        train_sample_inception_feature = train_sample[consts.INCEPTION_OUTPUT_FIELD]
+        train_sample_y_one_hot = train_sample[consts.LABEL_ONE_HOT_FIELD]
 
+        train_writer = tf.summary.FileWriter(os.path.join(paths.SUMMARY_DIR, MODEL_NAME, '/train'))
+        test_writer = tf.summary.FileWriter(os.path.join(paths.SUMMARY_DIR, MODEL_NAME, '/test'))
 
-def validate_train_data(tfrecords_filename, shapes):
+        sess.run(tf.global_variables_initializer())
 
-    img_batch, label_batch = read_record_to_queue(tfrecords_filename, shapes)
+        saver = tf.train.Saver()
 
-    # The op for initializing the variables.
-    init_op = tf.group(tf.global_variables_initializer(),
-                       tf.local_variables_initializer())
+        # main training loop
+        for epoch in range(EPOCHS_COUNT):
+            batch_examples = sess.run(next_train_batch)
+            batch_inception_features = batch_examples[consts.INCEPTION_OUTPUT_FIELD]
+            batch_y = batch_examples[consts.LABEL_ONE_HOT_FIELD]
 
-    with tf.Session() as sess:
-        sess.run(init_op)
+            _, summary = sess.run([optimizer, merged], feed_dict={
+                                      x: batch_inception_features,
+                                      y: batch_y
+                                  })
 
-        coord = tf.train.Coordinator()
-        threads = tf.train.start_queue_runners(sess=sess, coord=coord)
-        # Let's read off 3 batches just for example
-        for i in range(3):
-            imgs, labels = sess.run([img_batch, label_batch])
-            print(imgs.shape)
-        coord.request_stop()
-        coord.join(threads)
+            train_writer.add_summary(summary, epoch)
 
+            # Record summaries and test-set accuracy
+            if epoch % 100 == 0 or epoch == EPOCHS_COUNT:
 
-if __name__ == "__main__":
-    IMAGE_HEIGHT = 180
-    IMAGE_WIDTH = 180
+                _, dev_summaries = sess.run([merged], feed_dict={
+                                          x: dev_set_inception_feature,
+                                          y: dev_set_y_one_hot
+                                      })
+                test_writer.add_summary(dev_summaries, epoch)
 
-    tf_records_filename = "../input/train-100k.tfrecords"
-
-    image_shape = np.asarray([IMAGE_HEIGHT, IMAGE_WIDTH, 3])
-
-    # validate_train_data(tf_records_filename, image_shape)
-
-    train(tf_records_filename)
-    print("Hello world!")
-
+                saver.save(sess, os.path.join(paths.CHECKPOINTS_DIR, MODEL_NAME),
+                           latest_filename=MODEL_NAME + '_latest')
