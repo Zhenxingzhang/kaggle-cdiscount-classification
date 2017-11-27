@@ -1,5 +1,5 @@
 import tensorflow as tf
-import time
+import pyprind
 import numpy as np
 import argparse
 import yaml
@@ -81,42 +81,13 @@ if __name__ == '__main__':
         MODEL_NAME = cfg["MODEL"]["MODEL_NAME"]
         MODEL_LAYERS = cfg["MODEL"]["MODEL_LAYERS"]
     else:
-        BATCH_SIZE = 128
-        EPOCHS_COUNT = 50000
+        BATCH_SIZE = 64
+        EPOCHS_COUNT = 5000
         LEARNING_RATE = 0.0001
         TRAIN_TF_RECORDS = paths.TRAIN_TF_RECORDS
 
         MODEL_NAME = consts.CURRENT_MODEL_NAME
         MODEL_LAYERS = consts.HEAD_MODEL_LAYERS
-
-    # define model
-    x = tf.placeholder(dtype=tf.float32, shape=(None, MODEL_LAYERS[0]), name="x")
-    y = tf.placeholder(dtype=tf.int32, shape=(None), name="y")
-
-    y_ = fc_layer(x, input_dim=2048, output_dim=5270, layer_name='FC_1', act=tf.identity)
-
-    ###
-    # loss and eval functions
-    ###
-
-    with tf.name_scope('cross_entropy'):
-        cross_entropy_i = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=y_)
-        cross_entropy = tf.reduce_mean(cross_entropy_i)
-        tf.summary.scalar('cross_entropy', cross_entropy)
-
-    with tf.name_scope('accuracy'):
-        with tf.name_scope('correct_prediction'):
-            correct_prediction = tf.equal(tf.argmax(y,1), tf.argmax(y_,1))
-        with tf.name_scope('accuracy'):
-            accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-        tf.summary.scalar('accuracy', accuracy)
-
-    # training step (NOTE: improved optimiser and lower learning rate; needed for more complex model)
-    with tf.name_scope('train'):
-        optimizer = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
-
-    # Merge all the summaries and write them out to /summaries/conv (by default)
-    merged = tf.summary.merge_all()
 
     with tf.Graph().as_default() as g, tf.Session().as_default() as sess:
         next_train_batch, get_dev_ds, get_train_sample_ds = \
@@ -133,13 +104,45 @@ if __name__ == '__main__':
         train_sample_inception_feature = train_sample[consts.INCEPTION_OUTPUT_FIELD]
         train_sample_y_one_hot = train_sample[consts.LABEL_ONE_HOT_FIELD]
 
+        # define model
+        x = tf.placeholder(dtype=tf.float32, shape=(None, MODEL_LAYERS[0]), name="x")
+        y = tf.placeholder(dtype=tf.int32, shape=(None), name="y")
+
+        y_ = fc_layer(x, input_dim=2048, output_dim=5270, layer_name='FC_1', act=tf.identity)
+
+        ###
+        # loss and eval functions
+        ###
+
+        with tf.name_scope('cross_entropy'):
+            cross_entropy_i = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=y_)
+            cross_entropy = tf.reduce_mean(cross_entropy_i)
+            tf.summary.scalar('cross_entropy', cross_entropy)
+
+        with tf.name_scope('accuracy'):
+            with tf.name_scope('correct_prediction'):
+                # correct_prediction = tf.equal(tf.argmax(y,1), tf.argmax(y_,1))
+                correct_prediction = tf.equal(tf.argmax(y_, 1, output_type=tf.int32), y)
+            with tf.name_scope('accuracy'):
+                accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+            tf.summary.scalar('accuracy', accuracy)
+
+        # training step (NOTE: improved optimiser and lower learning rate; needed for more complex model)
+        with tf.name_scope('train'):
+            optimizer = tf.train.AdamOptimizer(LEARNING_RATE).minimize(cross_entropy)
+
+        # Merge all the summaries and write them out to /summaries/conv (by default)
+        merged = tf.summary.merge_all()
+
         train_writer = tf.summary.FileWriter(os.path.join(paths.SUMMARY_DIR, MODEL_NAME, '/train'))
         test_writer = tf.summary.FileWriter(os.path.join(paths.SUMMARY_DIR, MODEL_NAME, '/test'))
 
-        sess.run(tf.global_variables_initializer())
+        # sess.run(tf.global_variables_initializer()
+        tf.global_variables_initializer().run()
 
         saver = tf.train.Saver()
 
+        bar = pyprind.ProgBar(EPOCHS_COUNT, update_interval=1, width=60)
         # main training loop
         for epoch in range(EPOCHS_COUNT):
             batch_examples = sess.run(next_train_batch)
@@ -156,7 +159,7 @@ if __name__ == '__main__':
             # Record summaries and test-set accuracy
             if epoch % 100 == 0 or epoch == EPOCHS_COUNT:
 
-                _, dev_summaries = sess.run([merged], feed_dict={
+                dev_summaries = sess.run(merged, feed_dict={
                                           x: dev_set_inception_feature,
                                           y: dev_set_y_one_hot
                                       })
@@ -164,3 +167,4 @@ if __name__ == '__main__':
 
                 saver.save(sess, os.path.join(paths.CHECKPOINTS_DIR, MODEL_NAME),
                            latest_filename=MODEL_NAME + '_latest')
+            bar.update()

@@ -22,6 +22,7 @@ COPY ./setup /app/setup
 COPY ./data /app/data
 COPY ./src /app/src
 COPY ./notebooks /notebooks
+COPY ./config /app/config
 
 WORKDIR /data
 
