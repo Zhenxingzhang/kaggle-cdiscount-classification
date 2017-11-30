@@ -4,6 +4,7 @@ from tqdm import tqdm
 import argparse
 import os
 
+
 def random_sample_bson(input_bson_filename, output_bson_filename,  n=100, number_random_example=10):
 
     data = bson.decode_file_iter(open(input_bson_filename, 'rb'))
@@ -13,18 +14,17 @@ def random_sample_bson(input_bson_filename, output_bson_filename,  n=100, number
 
     r_idx = 0
 
-    output = open(output_bson_filename, 'w+')
-
-    for c, d in tqdm(enumerate(data), total=n):
-        if c != random_items[r_idx]:
-            continue
-        else:
-            # print("pick random item: {}".format(c))
-            # insert your code here.
-            output.write(BSON.encode(d))
-            r_idx = r_idx + 1
-            if r_idx >= number_random_example:
-                break
+    with open(output_bson_filename, 'w+') as output:
+        for c, d in tqdm(enumerate(data), total=n):
+            if c != random_items[r_idx]:
+                continue
+            else:
+                # print("pick random item: {}".format(c))
+                # insert your code here.
+                output.write(BSON.encode(d))
+                r_idx = r_idx + 1
+                if r_idx >= number_random_example:
+                    break
 
     print("Finish convert tfrecords with {} records".format(r_idx))
 
@@ -39,7 +39,7 @@ def split_sample_bson(input_bson_filename, output_bson_dir, n=100, split =10):
 
         split = int(c / no_example_per_split)
 
-        output = open(os.path.join(output_bson_dir, "{}.bson".format(split)), 'w+')
+        output = open(os.path.join(output_bson_dir, "{}.bson".format(split)), 'a+')
 
         output.write(BSON.encode(d))
 
