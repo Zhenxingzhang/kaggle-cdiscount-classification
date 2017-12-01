@@ -60,7 +60,7 @@ def _fc_layer(layer_name, input_tensor, no_filters, act=tf.nn.relu,
         return activation
 
 
-def dense_neural_network(layers, gamma=0.1):
+def dense_neural_network(layers, gamma=0.001):
     n_x = layers[0]
     n_y = layers[-1]
     L = len(layers)
@@ -99,8 +99,7 @@ def dense_neural_network(layers, gamma=0.1):
     z = tf.matmul(a, W) + b
 
     with tf.name_scope("cost"):
-        cost = gamma * tf.reduce_mean(
-            tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=z))  # +\
+        cost = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=z))  # +\
         # gamma * tf.reduce_sum([tf.nn.l2_loss(w) for w in Ws])
         summaries.append(tf.summary.scalar('cost', cost))
 
