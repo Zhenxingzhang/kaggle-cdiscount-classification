@@ -1,3 +1,6 @@
+# https://stackoverflow.com/questions/43092439/shuffling-and-training-in-tensorflow
+# https://stackoverflow.com/questions/44132307/tf-contrib-data-dataset-repeat-with-shuffle-notice-epoch-end-mixed-epochs
+
 import tensorflow as tf
 import numpy as np
 

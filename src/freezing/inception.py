@@ -11,6 +11,7 @@ from skimage.data import imread
 import io
 from src.common.paths import INCEPTION_MODEL_DIR
 
+
 class NodeLookup(object):
     def __init__(self,
                  model_dir=INCEPTION_MODEL_DIR,
@@ -105,7 +106,7 @@ def inception_inference():
     return forward
 
 
-def inception_image_inference():
+def inception_batch_inference():
     tensors = freeze.unfreeze_into_current_graph(paths.IMAGENET_GRAPH_DEF,
                                                  tensor_names=[
                                                      consts.INCEPTION_INPUT_ARRAY_TENSOR,
@@ -118,32 +119,37 @@ def inception_image_inference():
     return forward
 
 
+'''
+The inception is only able to inference one image at a time.
+'''
 if __name__ == '__main__':
 
     with tf.Session().as_default() as sess:
-        image_raw_1 = tf.read_file('data/images/cat.png').eval()
-        img1 = np.array(imread(io.BytesIO(image_raw_1)))[:, :, 0:3]
+        # image_raw_1 = tf.read_file('data/images/airedale.jpg').eval()
+        # image_raw_1 = tf.read_file('data/inception-imgs/tiger_shark.jpg').eval()
 
-        image_raw_2 = tf.read_file('data/images/cat.png').eval()
-        img2 = np.array(imread(io.BytesIO(image_raw_2)))[:, :, 0:3]
+        img_batch = np.zeros([2, 299, 299, 3], float)
+        img1 = imread('data/inception-imgs/tiger_shark.jpg')
+        img_batch[0, :] = img1
+        img_batch[1, :] = img1
+        print(img_batch.shape)
 
-        imgs = np.array([img1, img2])
+        g = tf.Graph()
+        sess = tf.Session(graph=g)
 
-    g = tf.Graph()
-    sess = tf.Session(graph=g)
+        with g.as_default():
+            model = inception_batch_inference()
 
-    with g.as_default():
-        model = inception_image_inference()
+        with g.as_default():
+            out = model(sess, img_batch)
+            predictions = np.squeeze(out)
+            print(predictions.shape)
 
-    with g.as_default():
-        out = model(sess, imgs)
-        predictions = np.squeeze(out)
-
-        for p in predictions:
             node_lookup = NodeLookup()
-            top_5 = p.argsort()[-5:][::-1]
+
+            top_5 = predictions.argsort()[-5:][::-1]
             for node_id in top_5:
                 human_string = node_lookup.id_to_string(node_id)
-                score = p[node_id]
-                print('%s (score = %.5f)' % (human_string, score))
+                score = predictions[node_id]
+                print('%d %s (score = %.5f)' % (node_id, human_string, score))
 

@@ -9,19 +9,7 @@ from tqdm import tqdm
 from skimage.data import imread
 from src.freezing import inception
 from src.common import consts
-
-
-# helper functions
-def _bytes_feature(value):
-    return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
-
-
-def _int64_feature(value):
-    return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
-
-
-def _float_feature(value):
-    return tf.train.Feature(float_list=tf.train.FloatList(value=value))
+from src.data_preparation.tf_record_utils import bytes_feature, float_feature, int64_feature
 
 
 def convert_bson_2_record(input_bson_filename, output_tfrecords_filename, n=None, inception_feature=False):
@@ -52,13 +40,14 @@ def convert_bson_2_record(input_bson_filename, output_tfrecords_filename, n=None
                 # width = img.shape[1]
                 product_id = d['_id']
                 _feature = {
-                    'product_id': _int64_feature(product_id),
-                    consts.IMAGE_RAW_FIELD: _bytes_feature(img.tostring())
+                    'product_id': int64_feature(product_id),
+                    consts.IMAGE_RAW_FIELD: bytes_feature(img.tostring())
                 }
                 if inception_feature:
-                    _feature[consts.INCEPTION_OUTPUT_FIELD] = _float_feature(get_inception_ouput(img_raw))
+                    inception_feature_ = get_inception_ouput(img_raw)
+                    _feature[consts.INCEPTION_OUTPUT_FIELD] = float_feature(inception_feature_)
                 if 'category_id' in d:
-                    _feature[consts.LABEL_ONE_HOT_FIELD] = _int64_feature(int(one_hot_encoder([str(d['category_id'])])[0]))
+                    _feature[consts.LABEL_ONE_HOT_FIELD] = int64_feature(int(one_hot_encoder([str(d['category_id'])])[0]))
                 example = tf.train.Example(features=tf.train.Features(feature=_feature))
                 writer.write(example.SerializeToString())
 

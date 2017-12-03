@@ -7,3 +7,4 @@ mkdir -p /data/graphs
 mkdir -p /data/metrics
 mkdir -p /data/summary
 mkdir -p /data/outputs
+mkdir -p /data/inception/2016/

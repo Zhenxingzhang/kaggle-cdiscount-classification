@@ -1,0 +1,110 @@
+0 lighter, light, igniter, ignitor
+1 lighter, light, igniter, ignitor
+2 power drill
+3 folding chair
+4 lighter, light, igniter, ignitor
+5 spatula
+6 vacuum, vacuum cleaner
+7 whistle
+8 punching bag, punch bag, punching ball, punchball
+9 bassoon
+11 nipple
+12 book jacket, dust cover, dust jacket, dust wrapper
+13 loudspeaker, speaker, speaker unit, loudspeaker system, speaker system
+13 mouse, computer mouse
+13 gasmask, respirator, gas helmet
+13 can opener, tin opener
+15 web site, website, internet site, site
+16 iPod
+17 can opener, tin opener
+18 hard disc, hard disk, fixed disk
+19 web site, website, internet site, site
+19 web site, website, internet site, site
+20 cellular telephone, cellular phone, cellphone, cell, mobile phone
+22 nail
+25 binder, ring-binder
+25 Band Aid
+25 lighter, light, igniter, ignitor
+25 cellular telephone, cellular phone, cellphone, cell, mobile phone
+26 analog clock
+26 television, television system
+26 mouse, computer mouse
+26 ballpoint, ballpoint pen, ballpen, Biro
+28 affenpinscher, monkey pinscher, monkey dog
+30 web site, website, internet site, site
+31 cassette
+33 modem
+33 modem
+34 iPod
+35 book jacket, dust cover, dust jacket, dust wrapper
+36 web site, website, internet site, site
+37 basketball
+38 hand-held computer, hand-held microcomputer
+39 screwdriver
+39 screwdriver
+40 binder, ring-binder
+41 switch, electric switch, electrical switch
+42 web site, website, internet site, site
+42 loudspeaker, speaker, speaker unit, loudspeaker system, speaker system
+43 modem
+43 cassette player
+43 tripod
+44 lighter, light, igniter, ignitor
+45 plate rack
+46 mailbag, postbag
+47 cellular telephone, cellular phone, cellphone, cell, mobile phone
+48 cellular telephone, cellular phone, cellphone, cell, mobile phone
+50 binoculars, field glasses, opera glasses
+51 bookcase
+52 scoreboard
+53 borzoi, Russian wolfhound
+54 binder, ring-binder
+55 lighter, light, igniter, ignitor
+56 binder, ring-binder
+57 loupe, jeweler's loupe
+57 loupe, jeweler's loupe
+57 face powder
+58 lens cap, lens cover
+59 dumbbell
+60 cellular telephone, cellular phone, cellphone, cell, mobile phone
+61 cellular telephone, cellular phone, cellphone, cell, mobile phone
+62 pencil sharpener
+62 radio, wireless
+63 iPod
+64 ballpoint, ballpoint pen, ballpen, Biro
+64 nipple
+64 hand-held computer, hand-held microcomputer
+66 web site, website, internet site, site
+69 switch, electric switch, electrical switch
+70 flagpole, flagstaff
+71 hammer
+72 analog clock
+73 plane, carpenter's plane, woodworking plane
+73 reel
+73 reel
+73 reel
+74 ballpoint, ballpoint pen, ballpen, Biro
+75 loudspeaker, speaker, speaker unit, loudspeaker system, speaker system
+76 screw
+76 cocktail shaker
+77 iPod
+79 cellular telephone, cellular phone, cellphone, cell, mobile phone
+80 binder, ring-binder
+81 can opener, tin opener
+83 cellular telephone, cellular phone, cellphone, cell, mobile phone
+84 toilet seat
+87 scabbard
+88 cellular telephone, cellular phone, cellphone, cell, mobile phone
+89 cellular telephone, cellular phone, cellphone, cell, mobile phone
+90 monitor
+91 hand-held computer, hand-held microcomputer
+92 book jacket, dust cover, dust jacket, dust wrapper
+95 envelope
+97 hammer
+97 cellular telephone, cellular phone, cellphone, cell, mobile phone
+98 carpenter's kit, tool kit
+98 pay-phone, pay-station
+98 pay-phone, pay-station
+98 radio, wireless
+99 jersey, T-shirt, tee shirt
+101 revolver, six-gun, six-shooter

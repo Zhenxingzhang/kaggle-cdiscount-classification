@@ -9,6 +9,7 @@ test.tfrecords
 train.tfrecords
 *.tfrecords
 .idea/
+output/*
 
 log/
 

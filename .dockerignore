@@ -3,3 +3,4 @@
 *.tfrecords
 .DS_Store
 .pyc
+output/*

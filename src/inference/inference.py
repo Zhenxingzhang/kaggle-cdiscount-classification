@@ -59,6 +59,5 @@ def infer_test(model_name, output_probs, x):
 if __name__ == '__main__':
     with tf.Graph().as_default():
         # x = tf.placeholder(dtype=tf.float32, shape=(consts.INCEPTION_CLASSES_COUNT, None), name="x")
-        _, output_probs, _, _ = denseNN.dense_neural_network(
-            x, consts.HEAD_MODEL_LAYERS, gamma=0.01)
+        _, output_probs, x, _, _ = denseNN.dense_neural_network(consts.HEAD_MODEL_LAYERS, gamma=0.01)
         infer_test(consts.CURRENT_MODEL_NAME, output_probs, x)
