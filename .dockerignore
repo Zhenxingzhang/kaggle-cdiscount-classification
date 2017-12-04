@@ -1,6 +1,6 @@
 .ipynb_checkpoints
 *.bson
 *.tfrecords
-.DS_Store
-.pyc
-output/*
+**/.DS_Store
+**/*.pyc
+output/

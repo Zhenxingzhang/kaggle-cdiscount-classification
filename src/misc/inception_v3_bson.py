@@ -1,4 +1,4 @@
-from src.amisc.ReadableLabel import ReadableLabel
+from src.misc.ReadableLabel import ReadableLabel
 from tensorflow.contrib.slim.nets import inception
 import tensorflow as tf
 import bson

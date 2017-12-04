@@ -7,7 +7,7 @@ import numpy as np
 from scipy.misc import imread
 import tensorflow as tf
 from tensorflow.contrib.slim.nets import inception
-from src.amisc.ReadableLabel import ReadableLabel
+from src.misc.ReadableLabel import ReadableLabel
 
 
 def load_images(input_dir, batch_shape):

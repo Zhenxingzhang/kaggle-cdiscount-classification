@@ -74,9 +74,12 @@ def convert_bson_2_record(input_bson_filename, output_tfrecords_filename,
 
                     for idx in range(len(batch_sample)):
                         _feature = dict()
+                        _feature["_id"] = int64_feature(batch_sample[idx]["_id"])
                         _feature[consts.INCEPTION_OUTPUT_FIELD] = float_feature(np.squeeze(features[idx, :]))
-                        category_id = batch_sample[idx]["category_id"]
-                        _feature[consts.LABEL_ONE_HOT_FIELD] = int64_feature(int(one_hot_encoder([str(category_id)])[0]))
+                        if "category_id" in batch_sample[idx]:
+                            category_id = batch_sample[idx]["category_id"]
+                            _feature[consts.LABEL_ONE_HOT_FIELD] = \
+                                int64_feature(int(one_hot_encoder([str(category_id)])[0]))
                         example = tf.train.Example(features=tf.train.Features(feature=_feature))
                         writer.write(example.SerializeToString())
                     batch_idx = 0

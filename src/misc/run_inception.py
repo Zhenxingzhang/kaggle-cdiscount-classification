@@ -5,7 +5,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.slim.nets import inception
 from PIL import Image
-from src.amisc.ReadableLabel import ReadableLabel
+from src.misc.ReadableLabel import ReadableLabel
 
 slim = tf.contrib.slim
 

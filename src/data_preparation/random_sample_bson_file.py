@@ -29,7 +29,7 @@ def random_sample_bson(input_bson_filename, output_bson_filename,  n=100, number
     print("Finish convert tfrecords with {} records".format(r_idx))
 
 
-def split_sample_bson(input_bson_filename, output_bson_dir, n=100, split =10):
+def split_sample_bson(input_bson_filename, output_bson_dir, n=100, split=10):
 
     data = bson.decode_file_iter(open(input_bson_filename, 'rb'))
 

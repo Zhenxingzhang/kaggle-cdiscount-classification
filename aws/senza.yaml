@@ -31,7 +31,7 @@ SenzaInfo:
         Default: "zalando-echo-eu-west-1-datasets"
     - InstanceType:
         Description: "The type on GPU instance you want"
-        Default: p2.xlarge
+        Default: p2.8xlarge
 
 # a list of senza components to apply to the definition
 SenzaComponents:
