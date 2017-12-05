@@ -63,7 +63,8 @@ def convert_bson_2_record(input_bson_filename, output_tfrecords_filename,
 
                     sample = dict()
                     sample["_id"] = d['_id']
-                    sample["category_id"] = d['category_id']
+                    if 'category_id' in d:
+                        sample["category_id"] = d['category_id']
                     batch_sample.append(sample)
 
                 batch_idx = batch_idx + 1

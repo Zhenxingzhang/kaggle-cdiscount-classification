@@ -89,6 +89,9 @@ if __name__ == '__main__':
         MODEL_NAME = consts.CURRENT_MODEL_NAME
         MODEL_LAYERS = consts.HEAD_MODEL_LAYERS
 
+    print("Training model {}".format(MODEL_NAME))
+    print("Training data {}".format(TRAIN_TF_RECORDS))
+
     with tf.Graph().as_default() as g, tf.Session().as_default() as sess:
         next_train_batch, get_dev_ds, get_train_sample_ds = \
             train_dev_split(sess, TRAIN_TF_RECORDS,
@@ -134,8 +137,8 @@ if __name__ == '__main__':
         # Merge all the summaries and write them out to /summaries/conv (by default)
         merged = tf.summary.merge_all()
 
-        train_writer = tf.summary.FileWriter(os.path.join(paths.SUMMARY_DIR, MODEL_NAME, '/train'))
-        test_writer = tf.summary.FileWriter(os.path.join(paths.SUMMARY_DIR, MODEL_NAME, '/test'))
+        train_writer = tf.summary.FileWriter(os.path.join(paths.SUMMARY_DIR, MODEL_NAME, 'train'))
+        test_writer = tf.summary.FileWriter(os.path.join(paths.SUMMARY_DIR, MODEL_NAME, 'test'))
 
         # sess.run(tf.global_variables_initializer()
         tf.global_variables_initializer().run()

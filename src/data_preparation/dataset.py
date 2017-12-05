@@ -29,8 +29,8 @@ def read_record_to_queue(tf_record_name, shapes, preproc_func=None, num_epochs=1
             features={
                 # We know the length of both fields. If not the
                 # tf.VarLenFeature could be used
-                'product_id': tf.FixedLenFeature([], tf.int64),
-                consts.IMAGE_RAW_FIELD: tf.FixedLenFeature([], tf.string),
+                '_id': tf.FixedLenFeature([], tf.int64),
+                # consts.IMAGE_RAW_FIELD: tf.FixedLenFeature([], tf.string),
                 consts.INCEPTION_OUTPUT_FIELD: tf.FixedLenFeature([consts.INCEPTION_CLASSES_COUNT], tf.float32),
                 consts.LABEL_ONE_HOT_FIELD: tf.FixedLenFeature([], tf.int64)
             })
@@ -79,8 +79,8 @@ def read_train_tf_record(record):
         features={
             # We know the length of both fields. If not the
             # tf.VarLenFeature could be used
-            'product_id': tf.FixedLenFeature([], tf.int64),
-            consts.IMAGE_RAW_FIELD: tf.FixedLenFeature([], tf.string),
+            '_id': tf.FixedLenFeature([], tf.int64),
+            # consts.IMAGE_RAW_FIELD: tf.FixedLenFeature([], tf.string),
             consts.INCEPTION_OUTPUT_FIELD: tf.FixedLenFeature([consts.INCEPTION_CLASSES_COUNT], tf.float32),
             consts.LABEL_ONE_HOT_FIELD: tf.FixedLenFeature([], tf.int64)
         })
