@@ -1,0 +1,14 @@
+MODEL:
+    MODEL_NAME : "LR-Inception-2016"
+    MODEL_LAYERS: [2048,5270]
+
+TRAIN:
+    BATCH_SIZE : 64
+    EPOCHS_COUNT : 25000
+    LEARNING_RATE : 0.001
+    TRAIN_TF_RECORDS : "/data/data/train/train_300k.tfrecords"
+
+TEST:
+    BATCH_SIZE : 20000
+    TEST_TF_RECORDS : "/data/data/test/tf_records/"
+    OUTOUT_CSV_PATH : "/data/outputs/LR-Inception-2016/predict.csv"

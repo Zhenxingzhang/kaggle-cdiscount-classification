@@ -94,6 +94,24 @@ def features_dataset():
     return _ds, file_names
 
 
+def read_test_tf_record(record):
+    return tf.parse_single_example(
+        record,
+        features={
+            '_id': tf.FixedLenFeature([], tf.int64),
+            # consts.IMAGE_RAW_FIELD: tf.FixedLenFeature([], tf.string),
+            consts.INCEPTION_OUTPUT_FIELD: tf.FixedLenFeature([consts.INCEPTION_CLASSES_COUNT], tf.float32)
+        })
+
+
+def test_features_dataset():
+    file_names_ = tf.placeholder(tf.string)
+    ds_ = tf.contrib.data.TFRecordDataset(file_names_, compression_type='ZLIB') \
+        .map(read_test_tf_record)
+
+    return ds_, file_names_
+
+
 def one_hot_label_encoder(csv_path=paths.CATEGORIES):
     _category_labels = pd.read_csv(csv_path, dtype={'category_id': np.str})
     _lb = preprocessing.LabelBinarizer()

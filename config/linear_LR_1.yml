@@ -3,7 +3,12 @@ MODEL:
     MODEL_LAYERS: [2048,5270]
 
 TRAIN:
-    BATCH_SIZE : 64
-    EPOCHS_COUNT : 25000
+    BATCH_SIZE : 10
+    EPOCHS_COUNT : 250
     LEARNING_RATE : 0.001
     TRAIN_TF_RECORDS : "/data/data/train_example.tfrecords"
+
+TEST:
+    BATCH_SIZE : 20
+    TEST_TF_RECORDS : "/data/data/train_example.tfrecords"
+    OUTOUT_CSV_PATH : "/data/outputs/LR/predict.csv"

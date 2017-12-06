@@ -64,30 +64,29 @@ def fc_layer(input_tensor, input_dim, output_dim, layer_name, act=tf.nn.relu):
     return activations
 
 
+def linear_model(model_layer_):
+    _x = tf.placeholder(dtype=tf.float32, shape=(None, model_layer_[0]), name="x")
+    _y = tf.placeholder(dtype=tf.int32, shape=(None), name="y")
+
+    _y_ = fc_layer(_x, input_dim=2048, output_dim=5270, layer_name='FC_1', act=tf.identity)
+    return _x, _y, _y_
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Default argument')
-    parser.add_argument('-c', dest="config_filename", type=str, required=False, help='the config file name')
+    parser.add_argument('-c', dest="config_filename", type=str, required=True,
+                        help='the config file name must be provide')
     args = parser.parse_args()
 
-    if args.config_filename:
-        with open(args.config_filename, 'r') as yml_file:
-            cfg = yaml.load(yml_file)
+    with open(args.config_filename, 'r') as yml_file:
+        cfg = yaml.load(yml_file)
 
-        BATCH_SIZE = cfg["TRAIN"]["BATCH_SIZE"]
-        EPOCHS_COUNT = cfg["TRAIN"]["EPOCHS_COUNT"]
-        LEARNING_RATE = cfg["TRAIN"]["LEARNING_RATE"]
-        TRAIN_TF_RECORDS = cfg["TRAIN"]["TRAIN_TF_RECORDS"]
+    BATCH_SIZE = cfg["TRAIN"]["BATCH_SIZE"]
+    EPOCHS_COUNT = cfg["TRAIN"]["EPOCHS_COUNT"]
+    LEARNING_RATE = cfg["TRAIN"]["LEARNING_RATE"]
+    TRAIN_TF_RECORDS = cfg["TRAIN"]["TRAIN_TF_RECORDS"]
 
-        MODEL_NAME = cfg["MODEL"]["MODEL_NAME"]
-        MODEL_LAYERS = cfg["MODEL"]["MODEL_LAYERS"]
-    else:
-        BATCH_SIZE = 64
-        EPOCHS_COUNT = 5000
-        LEARNING_RATE = 0.0001
-        TRAIN_TF_RECORDS = paths.TRAIN_TF_RECORDS
-
-        MODEL_NAME = consts.CURRENT_MODEL_NAME
-        MODEL_LAYERS = consts.HEAD_MODEL_LAYERS
+    MODEL_NAME = cfg["MODEL"]["MODEL_NAME"]
+    MODEL_LAYERS = cfg["MODEL"]["MODEL_LAYERS"]
 
     print("Training model {}".format(MODEL_NAME))
     print("Training data {}".format(TRAIN_TF_RECORDS))
@@ -108,10 +107,7 @@ if __name__ == '__main__':
         train_sample_y_one_hot = train_sample[consts.LABEL_ONE_HOT_FIELD]
 
         # define model
-        x = tf.placeholder(dtype=tf.float32, shape=(None, MODEL_LAYERS[0]), name="x")
-        y = tf.placeholder(dtype=tf.int32, shape=(None), name="y")
-
-        y_ = fc_layer(x, input_dim=2048, output_dim=5270, layer_name='FC_1', act=tf.identity)
+        x, y, y_ = linear_model(MODEL_LAYERS)
 
         ###
         # loss and eval functions
