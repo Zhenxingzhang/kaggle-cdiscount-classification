@@ -13,24 +13,24 @@ import yaml
 from src.training.train_model import linear_model
 
 
-def infer_test(model_name, x_, predict_labels_, batch_size):
+def infer_test(model_name, x_, predict_labels_, batch_size, test_tfrecords_files, test_prediction_csv):
 
     one_hot_encoder, one_hot_decoder = dataset.one_hot_label_encoder(csv_path="data/category_names.csv")
 
     with tf.Session().as_default() as sess:
         ds, filename = dataset.test_features_dataset()
         ds_iter = ds.batch(batch_size).make_initializable_iterator()
-        sess.run(ds_iter.initializer, feed_dict={filename: paths.TEST_TF_RECORDS})
+        sess.run(ds_iter.initializer, feed_dict={filename: test_tfrecords_files})
 
         tf.global_variables_initializer().run()
 
-        saver = tf.train.Saver()
-        lines = open(os.path.join(paths.CHECKPOINTS_DIR, model_name + '_latest')).read().split('\n')
-        last_checkpoint = [l.split(':')[1].replace('"', '').strip() for l in lines if 'model_checkpoint_path:' in l][0]
-        saver.restore(sess, os.path.join(paths.CHECKPOINTS_DIR, last_checkpoint))
-
-        category_id = one_hot_decoder(np.identity(consts.CLASSES_COUNT))
-        agg_test_df = pd.DataFrame(columns=["_id", "category_id"])
+        # saver = tf.train.Saver()
+        # lines = open(os.path.join(paths.CHECKPOINTS_DIR, model_name + '_latest')).read().split('\n')
+        # last_checkpoint = [l.split(':')[1].replace('"', '').strip() for l in lines if 'model_checkpoint_path:' in l][0]
+        # saver.restore(sess, os.path.join(paths.CHECKPOINTS_DIR, last_checkpoint))
+        #
+        # category_id = one_hot_decoder(np.identity(consts.CLASSES_COUNT))
+        # agg_test_df = pd.DataFrame(columns=["_id", "category_id"])
 
         try:
             while True:
@@ -39,24 +39,25 @@ def infer_test(model_name, x_, predict_labels_, batch_size):
                 ids = test_batch['_id']
                 inception_features = test_batch[consts.INCEPTION_OUTPUT_FIELD]
 
-                pred_labels = sess.run(predict_labels_, feed_dict={x_: inception_features})
-
-                #print(pred_probs.shape)
-
-                test_df = pd.DataFrame(data=pred_labels, columns=category_id)
-                test_df.index = ids
-
-                if agg_test_df is None:
-                    agg_test_df = test_df
-                else:
-                    agg_test_df = agg_test_df.append(test_df)
+                print(ids.shape)
+                # pred_labels = sess.run(predict_labels_, feed_dict={x_: inception_features})
+                #
+                # #print(pred_probs.shape)
+                #
+                # test_df = pd.DataFrame(data=pred_labels, columns=category_id)
+                # test_df.index = ids
+                #
+                # if agg_test_df is None:
+                #     agg_test_df = test_df
+                # else:
+                #     agg_test_df = agg_test_df.append(test_df)
 
         except tf.errors.OutOfRangeError:
             print('End of the dataset')
 
-        agg_test_df.to_csv(paths.TEST_PREDICTIONS, index_label='id', float_format='%.17f')
+        # agg_test_df.to_csv(paths.TEST_PREDICTIONS, index_label='id', float_format='%.17f')
 
-        print('predictions saved to %s' % paths.TEST_PREDICTIONS)
+        print('predictions saved to %s' % test_prediction_csv)
 
 if __name__ == '__main__':
 
@@ -85,4 +86,4 @@ if __name__ == '__main__':
         predictions = tf.argmax(output_probs, 1)
 
         print(predictions.shape)
-    #     infer_test(MODEL_NAME, x, predictions, BATCH_SIZE)
+        infer_test(MODEL_NAME, x, predictions, BATCH_SIZE, TEST_TF_RECORDS, TEST_OUTPUT_CSV)

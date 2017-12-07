@@ -54,7 +54,7 @@ if __name__ == "__main__":
     parser.add_argument('-r', dest="number_of_random_records", type=int, required=True, help='number of random records to convert.')
     args = parser.parse_args()
 
-    # random_sample_bson(args.full_bson_filename, args.subset_bson_filename,
-    #                    n=args.total_records, number_random_example=args.number_of_random_records)
-    split_sample_bson(args.full_bson_filename, args.subset_bson_filename,
-                      n=args.total_records, split=args.number_of_random_records)
+    random_sample_bson(args.full_bson_filename, args.subset_bson_filename,
+                       n=args.total_records, number_random_example=args.number_of_random_records)
+    # split_sample_bson(args.full_bson_filename, args.subset_bson_filename,
+    #                   n=args.total_records, split=args.number_of_random_records)
