@@ -28,9 +28,6 @@ def infer_test(model_name, x_, output_probs_, batch_size, test_tfrecords_files, 
         lines = open(os.path.join(paths.CHECKPOINTS_DIR, model_name + '_latest')).read().split('\n')
         latest_checkpoint = [l.split(':')[1].replace('"', '').strip() for l in lines if 'model_checkpoint_path:' in l][0]
         saver.restore(sess, os.path.join(paths.CHECKPOINTS_DIR, latest_checkpoint))
-        #
-        # category_id = one_hot_decoder(np.identity(consts.CLASSES_COUNT))
-        # agg_test_df = pd.DataFrame(columns=["_id", "category_id"])
 
         with open(test_prediction_csv, 'w') as csvfile:
             csv_writer = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
@@ -46,25 +43,18 @@ def infer_test(model_name, x_, output_probs_, batch_size, test_tfrecords_files, 
                     probabilities_ = sess.run(output_probs_, feed_dict={x_: inception_features})
                     pred_labels = one_hot_decoder(probabilities_)
                     max_probs = np.apply_along_axis(np.amax, 1, probabilities_)
-                    #
-                    # #print(pred_probs.shape)
-                    #
-                    test_df = pd.DataFrame(data=zip(ids, pred_labels, max_probs), columns=["_id", "category_id", "prob"])
 
-                    idx = test_df.groupby(['_id'])['prob'].transform(max) == test_df['prob']
+                    for (_id, pred_label, prob) in zip(ids, pred_labels, max_probs):
+                        csv_writer.writerow([_id, pred_label, prob])
 
-                    test_df = test_df[idx]
-                    # test_df.index = ids
+                    # test_df = pd.DataFrame(data=zip(ids, pred_labels, max_probs), columns=["_id", "category_id", "prob"])
                     #
-                    # if agg_test_df is None:
-                    #     agg_test_df = test_df
-                    # else:
-                    #     agg_test_df = agg_test_df.append(test_df)
-                    # for (_id, p_label, prob) in test_df.as_matrix():
-                    #     csv_writer.writerow([_id, p_label, prob])
-                    for index, row in test_df.iterrows():
-                        # print (row)
-                        csv_writer.writerow([row._id, row.category_id, row.prob])
+                    # idx = test_df.groupby(['_id'])['prob'].transform(max) == test_df['prob']
+                    #
+                    # test_df = test_df[idx]
+                    #
+                    # for index, row in test_df.iterrows():
+                    #     csv_writer.writerow([row._id, row.category_id, row.prob])
 
             except tf.errors.OutOfRangeError:
                 print('End of the dataset')
@@ -77,14 +67,23 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Default argument')
     parser.add_argument('-c', dest="config_filename", type=str, required=True, help='the config file name')
+    parser.add_argument('-i', dest="tfrecord_filename", type=str, required=False, help='tfrecord file')
+    parser.add_argument('-o', dest="csv_filename", type=str, required=False, help='csv')
     args = parser.parse_args()
 
     with open(args.config_filename, 'r') as yml_file:
         cfg = yaml.load(yml_file)
 
     BATCH_SIZE = cfg["TEST"]["BATCH_SIZE"]
-    TEST_TF_RECORDS = cfg["TEST"]["TEST_TF_RECORDS"]
-    TEST_OUTPUT_CSV = cfg["TEST"]["OUTPUT_CSV_PATH"]
+    if args.tfrecord_filename is not None:
+        TEST_TF_RECORDS = args.tfrecord_filename
+    else:
+        TEST_TF_RECORDS = cfg["TEST"]["TEST_TF_RECORDS"]
+
+    if args.csv_filename is not None:
+        TEST_OUTPUT_CSV = args.csv_filename
+    else:
+        TEST_OUTPUT_CSV = cfg["TEST"]["OUTPUT_CSV_PATH"]
 
     MODEL_NAME = cfg["MODEL"]["MODEL_NAME"]
     MODEL_LAYERS = cfg["MODEL"]["MODEL_LAYERS"]
