@@ -100,7 +100,8 @@ def read_test_tf_record(record):
         features={
             '_id': tf.FixedLenFeature([], tf.int64),
             # consts.IMAGE_RAW_FIELD: tf.FixedLenFeature([], tf.string),
-            consts.INCEPTION_OUTPUT_FIELD: tf.FixedLenFeature([consts.INCEPTION_CLASSES_COUNT], tf.float32)
+            consts.INCEPTION_OUTPUT_FIELD: tf.FixedLenFeature([consts.INCEPTION_CLASSES_COUNT], tf.float32),
+            consts.LABEL_ONE_HOT_FIELD: tf.FixedLenFeature([], tf.int64)
         })
 
 
@@ -121,12 +122,18 @@ def one_hot_label_encoder(csv_path=paths.CATEGORIES):
         _lb_vector = lb_vec.reshape(-1).tolist()
         return _lb_vector.index(max(_lb_vector))
 
+    def label_vector(max_idx):
+        lb_vector = np.zeros(_lb.classes_.shape[0])
+        lb_vector[max_idx] = 1
+        return lb_vector
+
     def encode(lbs_str):
         _lbs_vector = np.asarray(_lb.transform(lbs_str), dtype=np.float32)
         return np.apply_along_axis(find_max_idx, 1, _lbs_vector)
 
     def decode(one_hots):
-        return np.asarray(_lb.inverse_transform(one_hots), dtype=np.str)
+        _lbs_vector = label_vector(one_hots)
+        return _lb.inverse_transform(np.array([_lbs_vector]))
 
     return encode, decode
 
