@@ -132,8 +132,8 @@ def one_hot_label_encoder(csv_path=paths.CATEGORIES):
         return np.apply_along_axis(find_max_idx, 1, _lbs_vector)
 
     def decode(one_hots):
-        _lbs_vector = label_vector(one_hots)
-        return _lb.inverse_transform(np.array([_lbs_vector]))
+        # _lbs_vector = label_vector(one_hots)
+        return _lb.inverse_transform(np.array(one_hots))
 
     return encode, decode
 

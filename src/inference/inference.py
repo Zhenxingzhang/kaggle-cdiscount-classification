@@ -44,6 +44,7 @@ def infer_test(model_name, x_, predict_labels_, batch_size, test_tfrecords_files
 
                     print(ids.shape)
                     pred_labels = sess.run(predict_labels_, feed_dict={x_: inception_features})
+                    pred_labels = one_hot_decoder(pred_labels)
                     #
                     # #print(pred_probs.shape)
                     #
@@ -55,7 +56,7 @@ def infer_test(model_name, x_, predict_labels_, batch_size, test_tfrecords_files
                     # else:
                     #     agg_test_df = agg_test_df.append(test_df)
                     for (_id, p_label) in zip(ids, pred_labels):
-                        csv_writer.writerow([_id, one_hot_decoder(p_label)[0]])
+                        csv_writer.writerow([_id, p_label])
 
             except tf.errors.OutOfRangeError:
                 print('End of the dataset')
@@ -88,7 +89,7 @@ if __name__ == '__main__':
         # x = tf.placeholder(dtype=tf.float32, shape=(consts.INCEPTION_CLASSES_COUNT, None), name="x")
         # _, output_probs, x, _, _ = denseNN.dense_neural_network(consts.HEAD_MODEL_LAYERS, gamma=0.01)
         x, _, output_probs = linear_model(MODEL_LAYERS)
-        predictions = tf.argmax(output_probs, 1)
+        # predictions = tf.argmax(output_probs, 1)
 
-        print(predictions.shape)
-        infer_test(MODEL_NAME, x, predictions, BATCH_SIZE, TEST_TF_RECORDS, TEST_OUTPUT_CSV)
+        print(output_probs.shape)
+        infer_test(MODEL_NAME, x, output_probs, BATCH_SIZE, TEST_TF_RECORDS, TEST_OUTPUT_CSV)
