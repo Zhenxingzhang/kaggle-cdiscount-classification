@@ -13,7 +13,7 @@ import yaml
 from src.training.train_model import linear_model
 
 
-def infer_test(model_name, x_, predict_labels_, batch_size, test_tfrecords_files, test_prediction_csv):
+def infer_test(model_name, x_, output_probs_, batch_size, test_tfrecords_files, test_prediction_csv):
 
     _, one_hot_decoder = dataset.one_hot_label_encoder(csv_path="data/category_names.csv")
 
@@ -34,29 +34,37 @@ def infer_test(model_name, x_, predict_labels_, batch_size, test_tfrecords_files
 
         with open(test_prediction_csv, 'w') as csvfile:
             csv_writer = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-            csv_writer.writerow(["_id", "category_id"])
+            csv_writer.writerow(["_id", "category_id", "prob"])
             try:
-                while True :
+                while True:
                     test_batch = sess.run(ds_iter.get_next())
 
                     ids = test_batch['_id']
                     inception_features = test_batch[consts.INCEPTION_OUTPUT_FIELD]
 
                     print(ids.shape)
-                    pred_labels = sess.run(predict_labels_, feed_dict={x_: inception_features})
-                    pred_labels = one_hot_decoder(pred_labels)
+                    probabilities_ = sess.run(output_probs_, feed_dict={x_: inception_features})
+                    pred_labels = one_hot_decoder(probabilities_)
+                    max_probs = np.apply_along_axis(np.amax, 1, probabilities_)
                     #
                     # #print(pred_probs.shape)
                     #
-                    # test_df = pd.DataFrame(data=pred_labels, columns=category_id)
+                    test_df = pd.DataFrame(data=zip(ids, pred_labels, max_probs), columns=["_id", "category_id", "prob"])
+
+                    idx = test_df.groupby(['_id'])['prob'].transform(max) == test_df['prob']
+
+                    test_df = test_df[idx]
                     # test_df.index = ids
                     #
                     # if agg_test_df is None:
                     #     agg_test_df = test_df
                     # else:
                     #     agg_test_df = agg_test_df.append(test_df)
-                    for (_id, p_label) in zip(ids, pred_labels):
-                        csv_writer.writerow([_id, p_label])
+                    # for (_id, p_label, prob) in test_df.as_matrix():
+                    #     csv_writer.writerow([_id, p_label, prob])
+                    for index, row in test_df.iterrows():
+                        # print (row)
+                        csv_writer.writerow([row._id, row.category_id, row.prob])
 
             except tf.errors.OutOfRangeError:
                 print('End of the dataset')
@@ -88,8 +96,8 @@ if __name__ == '__main__':
     with tf.Graph().as_default():
         # x = tf.placeholder(dtype=tf.float32, shape=(consts.INCEPTION_CLASSES_COUNT, None), name="x")
         # _, output_probs, x, _, _ = denseNN.dense_neural_network(consts.HEAD_MODEL_LAYERS, gamma=0.01)
-        x, _, output_probs = linear_model(MODEL_LAYERS)
-        # predictions = tf.argmax(output_probs, 1)
+        x, _, output_ = linear_model(MODEL_LAYERS)
+        output_probs = tf.nn.softmax(output_)
 
         print(output_probs.shape)
         infer_test(MODEL_NAME, x, output_probs, BATCH_SIZE, TEST_TF_RECORDS, TEST_OUTPUT_CSV)
