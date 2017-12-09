@@ -101,7 +101,6 @@ def read_test_tf_record(record):
             '_id': tf.FixedLenFeature([], tf.int64),
             # consts.IMAGE_RAW_FIELD: tf.FixedLenFeature([], tf.string),
             consts.INCEPTION_OUTPUT_FIELD: tf.FixedLenFeature([consts.INCEPTION_CLASSES_COUNT], tf.float32),
-            consts.LABEL_ONE_HOT_FIELD: tf.FixedLenFeature([], tf.int64)
         })
 
 
