@@ -34,12 +34,13 @@ def split_sample_bson(input_bson_filename, output_bson_dir, n=100, split=10):
     data = bson.decode_file_iter(open(input_bson_filename, 'rb'))
 
     no_example_per_split = int(n / split)
+    print("total number of sample per split: {}".format(no_example_per_split))
 
     for c, d in tqdm(enumerate(data), total=n):
 
-        split = int(c % no_example_per_split)
+        f_n = int(c % split)
 
-        output = open(os.path.join(output_bson_dir, "{}_{}.bson".format(split, no_example_per_split)), 'a+')
+        output = open(os.path.join(output_bson_dir, "{}_{}.bson".format(f_n, no_example_per_split)), 'a+')
 
         output.write(BSON.encode(d))
 
