@@ -31,7 +31,7 @@ if __name__ == '__main__':
     idx = prediction_df.groupby(['_id'])['prob'].transform(max) == prediction_df['prob']
 
     prediction_df = prediction_df[idx]
-    prediction_df = prediction_df.drop_duplicates('_id', inplace=True)
+    prediction_df.drop_duplicates('_id', inplace=True)
 
     output_file = args.output_csv
     print("write final results to : {}".format(output_file))

@@ -6,7 +6,8 @@ import yaml
 from src.common import consts, paths
 from src.training.train import train_dev_split
 import os
-
+from os import listdir
+from os.path import isfile, join
 
 # utility functions for weight and bias init
 def weight_variable(shape):
@@ -83,17 +84,23 @@ if __name__ == '__main__':
     BATCH_SIZE = cfg["TRAIN"]["BATCH_SIZE"]
     EPOCHS_COUNT = cfg["TRAIN"]["EPOCHS_COUNT"]
     LEARNING_RATE = cfg["TRAIN"]["LEARNING_RATE"]
-    TRAIN_TF_RECORDS = cfg["TRAIN"]["TRAIN_TF_RECORDS"]
+    TRAIN_TF_RECORDS = str(cfg["TRAIN"]["TRAIN_TF_RECORDS"])
 
     MODEL_NAME = cfg["MODEL"]["MODEL_NAME"]
     MODEL_LAYERS = cfg["MODEL"]["MODEL_LAYERS"]
 
+    print(TRAIN_TF_RECORDS)
+    if TRAIN_TF_RECORDS.endswith(".tfrecords"):
+        filenames = TRAIN_TF_RECORDS
+    else:
+        filenames = [join(TRAIN_TF_RECORDS, f) for f in listdir("/data/data/train/tf_records") if isfile(join(TRAIN_TF_RECORDS, f)) and f.endswith(".tf_records")]
+
     print("Training model {}".format(MODEL_NAME))
-    print("Training data {}".format(TRAIN_TF_RECORDS))
+    print("Training data {}".format(filenames))
 
     with tf.Graph().as_default() as g, tf.Session().as_default() as sess:
         next_train_batch, get_dev_ds, get_train_sample_ds = \
-            train_dev_split(sess, TRAIN_TF_RECORDS,
+            train_dev_split(sess, filenames,
                             dev_set_size=consts.DEV_SET_SIZE,
                             batch_size=BATCH_SIZE,
                             train_sample_size=consts.TRAIN_SAMPLE_SIZE)
