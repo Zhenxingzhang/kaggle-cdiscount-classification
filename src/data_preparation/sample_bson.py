@@ -37,13 +37,13 @@ def split_sample_bson(input_bson_filename, output_bson_dir, n=100, split=10):
 
     for c, d in tqdm(enumerate(data), total=n):
 
-        split = int(c / no_example_per_split)
+        split = int(c % no_example_per_split)
 
-        output = open(os.path.join(output_bson_dir, "{}.bson".format(split)), 'a+')
+        output = open(os.path.join(output_bson_dir, "{}_{}.bson".format(split, no_example_per_split)), 'a+')
 
         output.write(BSON.encode(d))
 
-    print("Finish convert tfrecords with {} records".format(c))
+    print("Finish convert tfrecords with {} records".format(c+1))
 
 
 if __name__ == "__main__":
@@ -54,7 +54,7 @@ if __name__ == "__main__":
     parser.add_argument('-r', dest="number_of_random_records", type=int, required=True, help='number of random records to convert.')
     args = parser.parse_args()
 
-    random_sample_bson(args.full_bson_filename, args.subset_bson_filename,
-                       n=args.total_records, number_random_example=args.number_of_random_records)
-    # split_sample_bson(args.full_bson_filename, args.subset_bson_filename,
-    #                   n=args.total_records, split=args.number_of_random_records)
+    # random_sample_bson(args.full_bson_filename, args.subset_bson_filename,
+    #                    n=args.total_records, number_random_example=args.number_of_random_records)
+    split_sample_bson(args.full_bson_filename, args.subset_bson_filename,
+                      n=args.total_records, split=args.number_of_random_records)

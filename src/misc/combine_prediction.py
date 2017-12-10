@@ -26,21 +26,23 @@ if __name__ == '__main__':
     # for idx, row in df_all_predictions.iterrows():
     #     print [row._id, row.category_id, row.prob]
 
-    prediction_df = pd.read_csv(args.input_csv)
+    prediction_df = pd.read_csv(args.input_csv, dtype=object)
 
     idx = prediction_df.groupby(['_id'])['prob'].transform(max) == prediction_df['prob']
 
     prediction_df = prediction_df[idx]
+    prediction_df = prediction_df.drop_duplicates('_id', inplace=True)
 
     output_file = args.output_csv
     print("write final results to : {}".format(output_file))
 
     if not os.path.exists(output_file):
-        f = file(output_file, "w")
-        f.write("_id, category_id")
+        with open(output_file, 'w') as csv_file:
+            csv_writer = csv.writer(csv_file, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+            csv_writer.writerow(["_id", "category_id"])
 
-    with open(output_file, 'a+') as csvfile:
-        csv_writer = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+    with open(output_file, 'a') as csv_file:
+        csv_writer = csv.writer(csv_file, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
 
         for index, row in prediction_df.iterrows():
             csv_writer.writerow([row._id, row.category_id])

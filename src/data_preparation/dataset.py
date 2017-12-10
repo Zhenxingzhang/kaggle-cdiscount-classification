@@ -121,10 +121,10 @@ def one_hot_label_encoder(csv_path=paths.CATEGORIES):
         _lb_vector = lb_vec.reshape(-1).tolist()
         return _lb_vector.index(max(_lb_vector))
 
-    def label_vector(max_idx):
-        lb_vector = np.zeros(_lb.classes_.shape[0])
-        lb_vector[max_idx] = 1
-        return lb_vector
+    # def label_vector(max_idx):
+    #     lb_vector = np.zeros(_lb.classes_.shape[0])
+    #     lb_vector[max_idx] = 1
+    #     return lb_vector
 
     def encode(lbs_str):
         _lbs_vector = np.asarray(_lb.transform(lbs_str), dtype=np.float32)
