@@ -6,7 +6,11 @@ TRAIN:
     BATCH_SIZE : 64
     EPOCHS_COUNT : 25000
     LEARNING_RATE : 0.001
-    TRAIN_TF_RECORDS : "/data/data/train/train_300k.tfrecords"
+    TRAIN_TF_RECORDS : "/data/data/train/train_300k.tfrecord"
+
+    EVAL_BATCH_SIZE : 5
+    EVAL_TF_RECORDS : "/data/data/train_example.tfrecord"
+
 
 TEST:
     BATCH_SIZE : 20000

@@ -10,28 +10,18 @@ from os.path import isfile, join
 from src.data_preparation import dataset
 
 
-def train_dev_split(sess_, tf_records_paths_, dev_set_size=2000, batch_size=64, train_sample_size=2000):
-    ds_, filenames_ = dataset.features_dataset()
+def get_data_iter(sess_, tf_records_paths_, buffer_size=20, batch_size=64):
+    ds_, file_names_ = dataset.features_dataset()
+    ds_iter = ds_.shuffle(buffer_size).repeat().batch(batch_size).make_initializable_iterator()
+    sess_.run(ds_iter.initializer, feed_dict={file_names_: tf_records_paths_})
+    return ds_iter.get_next()
 
-    # eval_ds_, eval_filenames_ = dataset.features_dataset()
-
-    train_ds_ = ds_.shuffle(buffer_size=20000).repeat()
-
-    train_ds_iter = train_ds_.batch(batch_size).make_initializable_iterator()
-
-    # train_sample_ds = ds.skip(dev_set_size)
-    # train_sample_ds_iter = train_sample_ds.shuffle(buffer_size=20000) \
-    #     .take(train_sample_size) \
-    #     .batch(train_sample_size) \
-    #     .make_initializable_iterator()
-
-    # dev_ds_iter = ds.take(dev_set_size).batch(dev_set_size).make_initializable_iterator()
-
-    sess_.run(train_ds_iter.initializer, feed_dict={filenames_: tf_records_paths_})
-    # sess_.run(dev_ds_iter.initializer, feed_dict={filenames_: tf_records_paths_})
-    # sess_.run(train_sample_ds_iter.initializer, feed_dict={filenames_: tf_records_paths_})
-
-    return train_ds_iter.get_next()#, dev_ds_iter.get_next(), train_sample_ds_iter.get_next()
+# def get_eval_iter()
+#     eval_ds_, eval_filenames_ = dataset.features_dataset()
+#     eval_ds_iter = eval_ds_.shuffle(buffer_size).repeat().batch(batch_size).make_initializable_iterator()
+#     sess_.run(eval_ds_iter.initializer, feed_dict={eval_filenames_: eval_tfrecords_paths_})
+#
+#     return train_ds_iter.get_next(), eval_ds_iter.get_next() #, train_sample_ds_iter.get_next()
 
 
 # utility functions for weight and bias init
@@ -98,6 +88,13 @@ def linear_model(model_layer_):
     return _x, _y, _y_
 
 
+def get_tfrecrods_files(input_):
+    if input_.endswith(".tfrecords"):
+        return [input_]
+    else:
+        return [join(input_, f) for f in listdir(input_) if isfile(join(input_, f)) and f.endswith(".tf_records")]
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Default argument')
     parser.add_argument('-c', dest="config_filename", type=str, required=True,
@@ -112,32 +109,32 @@ if __name__ == '__main__':
     LEARNING_RATE = cfg["TRAIN"]["LEARNING_RATE"]
     TRAIN_TF_RECORDS = str(cfg["TRAIN"]["TRAIN_TF_RECORDS"])
 
+    EVAL_BATCH_SIZE = cfg["TRAIN"]["EVAL_BATCH_SIZE"]
+    EVAL_TF_RECORDS = str(cfg["TRAIN"]["EVAL_TF_RECORDS"])
+
     MODEL_NAME = cfg["MODEL"]["MODEL_NAME"]
     MODEL_LAYERS = cfg["MODEL"]["MODEL_LAYERS"]
 
     print(TRAIN_TF_RECORDS)
-    if TRAIN_TF_RECORDS.endswith(".tfrecords"):
-        filenames = TRAIN_TF_RECORDS
-    else:
-        filenames = [join(TRAIN_TF_RECORDS, f) for f in listdir(TRAIN_TF_RECORDS) if isfile(join(TRAIN_TF_RECORDS, f)) and f.endswith(".tf_records")]
+    training_files = get_tfrecrods_files(TRAIN_TF_RECORDS)
+    eval_files = get_tfrecrods_files(TRAIN_TF_RECORDS)
 
     print("Training model {}".format(MODEL_NAME))
-    print("Training data {}".format(filenames))
+    print("Training data {}".format(training_files))
+    print("Training batch size {}".format(BATCH_SIZE))
 
     with tf.Graph().as_default() as g, tf.Session().as_default() as sess:
-        next_train_batch, get_dev_ds, get_train_sample_ds = \
-            train_dev_split(sess, filenames,
-                            dev_set_size=consts.DEV_SET_SIZE,
-                            batch_size=BATCH_SIZE,
-                            train_sample_size=consts.TRAIN_SAMPLE_SIZE)
+        next_train_batch = get_data_iter(sess, training_files, batch_size=BATCH_SIZE)
 
-        dev_set = sess.run(get_dev_ds)
-        dev_set_inception_feature = dev_set[consts.INCEPTION_OUTPUT_FIELD]
-        dev_set_y_one_hot = dev_set[consts.LABEL_ONE_HOT_FIELD]
+        next_eval_batch = get_data_iter(sess, eval_files, batch_size=EVAL_BATCH_SIZE)
 
-        train_sample = sess.run(get_train_sample_ds)
-        train_sample_inception_feature = train_sample[consts.INCEPTION_OUTPUT_FIELD]
-        train_sample_y_one_hot = train_sample[consts.LABEL_ONE_HOT_FIELD]
+        # dev_set = sess.run(get_dev_ds)
+        # dev_set_inception_feature = dev_set[consts.INCEPTION_OUTPUT_FIELD]
+        # dev_set_y_one_hot = dev_set[consts.LABEL_ONE_HOT_FIELD]
+
+        # train_sample = sess.run(get_train_sample_ds)
+        # train_sample_inception_feature = train_sample[consts.INCEPTION_OUTPUT_FIELD]
+        # train_sample_y_one_hot = train_sample[consts.LABEL_ONE_HOT_FIELD]
 
         # define model
         x, y, y_ = linear_model(MODEL_LAYERS)
@@ -153,7 +150,6 @@ if __name__ == '__main__':
 
         with tf.name_scope('accuracy'):
             with tf.name_scope('correct_prediction'):
-                # correct_prediction = tf.equal(tf.argmax(y,1), tf.argmax(y_,1))
                 correct_prediction = tf.equal(tf.argmax(y_, 1, output_type=tf.int32), y)
             with tf.name_scope('accuracy'):
                 accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
@@ -166,8 +162,8 @@ if __name__ == '__main__':
         # Merge all the summaries and write them out to /summaries/conv (by default)
         merged = tf.summary.merge_all()
 
-        train_writer = tf.summary.FileWriter(os.path.join(paths.SUMMARY_DIR, MODEL_NAME, 'train'), sess.graph)
-        test_writer = tf.summary.FileWriter(os.path.join(paths.SUMMARY_DIR, MODEL_NAME, 'test'))
+        train_writer = tf.summary.FileWriter(os.path.join(paths.SUMMARY_DIR, MODEL_NAME, str(LEARNING_RATE), 'train'), sess.graph)
+        test_writer = tf.summary.FileWriter(os.path.join(paths.SUMMARY_DIR, MODEL_NAME, str(LEARNING_RATE), 'test'))
 
         # sess.run(tf.global_variables_initializer()
         tf.global_variables_initializer().run()
@@ -180,6 +176,7 @@ if __name__ == '__main__':
             batch_examples = sess.run(next_train_batch)
             batch_inception_features = batch_examples[consts.INCEPTION_OUTPUT_FIELD]
             batch_y = batch_examples[consts.LABEL_ONE_HOT_FIELD]
+            print(batch_y)
 
             _, summary = sess.run([optimizer, merged], feed_dict={
                                       x: batch_inception_features,
@@ -189,14 +186,17 @@ if __name__ == '__main__':
             train_writer.add_summary(summary, epoch)
 
             # Record summaries and test-set accuracy
-            if epoch % 100 == 0 or epoch == EPOCHS_COUNT:
+            if epoch % 10 == 0 or epoch == EPOCHS_COUNT:
+                eval_batch_examples = sess.run(next_eval_batch)
+                eval_batch_features = eval_batch_examples[consts.INCEPTION_OUTPUT_FIELD]
+                eval_batch_y = eval_batch_examples[consts.LABEL_ONE_HOT_FIELD]
 
                 dev_summaries = sess.run(merged, feed_dict={
-                                          x: dev_set_inception_feature,
-                                          y: dev_set_y_one_hot
+                                          x: eval_batch_features,
+                                          y: eval_batch_y
                                       })
                 test_writer.add_summary(dev_summaries, epoch)
 
-                saver.save(sess, os.path.join(paths.CHECKPOINTS_DIR, MODEL_NAME),
+                saver.save(sess, os.path.join(paths.CHECKPOINTS_DIR, MODEL_NAME, str(LEARNING_RATE)),
                            latest_filename=MODEL_NAME + '_latest')
             bar.update()

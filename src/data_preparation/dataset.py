@@ -152,7 +152,7 @@ if __name__ == '__main__':
         next_record = ds_iter.get_next()
 
         train_data_dir = "/data/data/train/tf_records/"
-        file_names = [join(train_data_dir, f) for f in listdir(train_data_dir) if isfile(join(train_data_dir, f)) and f.endswith(".tf_records")]
+        file_names = [join(train_data_dir, f) for f in listdir(train_data_dir) if isfile(join(train_data_dir, f)) and f.endswith(".tfrecord")]
 
         # file_names = ["/data/data/train_example.tfrecords"]
 
