@@ -4,10 +4,35 @@ import numpy as np
 import argparse
 import yaml
 from src.common import consts, paths
-from src.training.train import train_dev_split
 import os
 from os import listdir
 from os.path import isfile, join
+from src.data_preparation import dataset
+
+
+def train_dev_split(sess_, tf_records_paths_, dev_set_size=2000, batch_size=64, train_sample_size=2000):
+    ds_, filenames_ = dataset.features_dataset()
+
+    # eval_ds_, eval_filenames_ = dataset.features_dataset()
+
+    train_ds_ = ds_.shuffle(buffer_size=20000).repeat()
+
+    train_ds_iter = train_ds_.batch(batch_size).make_initializable_iterator()
+
+    # train_sample_ds = ds.skip(dev_set_size)
+    # train_sample_ds_iter = train_sample_ds.shuffle(buffer_size=20000) \
+    #     .take(train_sample_size) \
+    #     .batch(train_sample_size) \
+    #     .make_initializable_iterator()
+
+    # dev_ds_iter = ds.take(dev_set_size).batch(dev_set_size).make_initializable_iterator()
+
+    sess_.run(train_ds_iter.initializer, feed_dict={filenames_: tf_records_paths_})
+    # sess_.run(dev_ds_iter.initializer, feed_dict={filenames_: tf_records_paths_})
+    # sess_.run(train_sample_ds_iter.initializer, feed_dict={filenames_: tf_records_paths_})
+
+    return train_ds_iter.get_next()#, dev_ds_iter.get_next(), train_sample_ds_iter.get_next()
+
 
 # utility functions for weight and bias init
 def weight_variable(shape):
@@ -71,6 +96,7 @@ def linear_model(model_layer_):
 
     _y_ = fc_layer(_x, input_dim=2048, output_dim=5270, layer_name='FC_1', act=tf.identity)
     return _x, _y, _y_
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Default argument')
@@ -140,7 +166,7 @@ if __name__ == '__main__':
         # Merge all the summaries and write them out to /summaries/conv (by default)
         merged = tf.summary.merge_all()
 
-        train_writer = tf.summary.FileWriter(os.path.join(paths.SUMMARY_DIR, MODEL_NAME, 'train'))
+        train_writer = tf.summary.FileWriter(os.path.join(paths.SUMMARY_DIR, MODEL_NAME, 'train'), sess.graph)
         test_writer = tf.summary.FileWriter(os.path.join(paths.SUMMARY_DIR, MODEL_NAME, 'test'))
 
         # sess.run(tf.global_variables_initializer()

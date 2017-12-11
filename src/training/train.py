@@ -11,8 +11,8 @@ from src.models import denseNN
 from src.common import paths
 
 
-def train_dev_split(sess_, tf_records_paths_, dev_set_size=2000, batch_size=64, train_sample_size=2000):
-    ds_, filenames_ = dataset.features_dataset()
+def train_dev_split(sess_, tf_records_path, dev_set_size=2000, batch_size=64, train_sample_size=2000):
+    ds_, filename = dataset.features_dataset()
 
     ds = ds_.shuffle(buffer_size=20000)
 
@@ -29,9 +29,9 @@ def train_dev_split(sess_, tf_records_paths_, dev_set_size=2000, batch_size=64, 
 
     dev_ds_iter = ds.take(dev_set_size).batch(dev_set_size).make_initializable_iterator()
 
-    sess_.run(train_ds_iter.initializer, feed_dict={filenames_: tf_records_paths_})
-    sess_.run(dev_ds_iter.initializer, feed_dict={filenames_: tf_records_paths_})
-    sess_.run(train_sample_ds_iter.initializer, feed_dict={filenames_: tf_records_paths_})
+    sess_.run(train_ds_iter.initializer, feed_dict={filename: tf_records_path})
+    sess_.run(dev_ds_iter.initializer, feed_dict={filename: tf_records_path})
+    sess_.run(train_sample_ds_iter.initializer, feed_dict={filename: tf_records_path})
 
     return train_ds_iter.get_next(), dev_ds_iter.get_next(), train_sample_ds_iter.get_next()
 
