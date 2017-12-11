@@ -93,7 +93,7 @@ if __name__ == '__main__':
     if TRAIN_TF_RECORDS.endswith(".tfrecords"):
         filenames = TRAIN_TF_RECORDS
     else:
-        filenames = [join(TRAIN_TF_RECORDS, f) for f in listdir("/data/data/train/tf_records") if isfile(join(TRAIN_TF_RECORDS, f)) and f.endswith(".tf_records")]
+        filenames = [join(TRAIN_TF_RECORDS, f) for f in listdir(TRAIN_TF_RECORDS) if isfile(join(TRAIN_TF_RECORDS, f)) and f.endswith(".tf_records")]
 
     print("Training model {}".format(MODEL_NAME))
     print("Training data {}".format(filenames))

@@ -4,7 +4,8 @@ from sklearn import preprocessing
 from src.common import paths
 import tensorflow as tf
 from src.common import consts
-
+from os import listdir
+from os.path import isfile, join
 
 def read_record_to_queue(tf_record_name, shapes, preproc_func=None, num_epochs=10, batch_size=32,
                          capacity=2000, min_after_dequeue=1000):
@@ -88,10 +89,10 @@ def read_train_tf_record(record):
 
 
 def features_dataset():
-    file_names = tf.placeholder(tf.string)
-    _ds = tf.contrib.data.TFRecordDataset(file_names, compression_type='ZLIB').map(read_train_tf_record)
+    _file_names = tf.placeholder(tf.string)
+    _ds = tf.contrib.data.TFRecordDataset(_file_names, compression_type='ZLIB').map(read_train_tf_record)
 
-    return _ds, file_names
+    return _ds, _file_names
 
 
 def read_test_tf_record(record):
@@ -146,14 +147,21 @@ if __name__ == '__main__':
     with tf.Graph().as_default() as g, tf.Session().as_default() as sess:
         ds, filenames = features_dataset()
         ds_iter = ds.shuffle(buffer_size=1000, seed=1).batch(10).make_initializable_iterator()
+        # ds_iter = ds.batch(10).make_initializable_iterator()
+
         next_record = ds_iter.get_next()
 
-        sess.run(ds_iter.initializer, feed_dict={filenames: "/data/data/train_example.tfrecords"})
+        train_data_dir = "/data/data/train/tf_records/"
+        file_names = [join(train_data_dir, f) for f in listdir(train_data_dir) if isfile(join(train_data_dir, f)) and f.endswith(".tf_records")]
+
+        # file_names = ["/data/data/train_example.tfrecords"]
+
+        sess.run(ds_iter.initializer, feed_dict={filenames: file_names})
         features = sess.run(next_record)
 
         # _, one_hot_decoder = one_hot_label_encoder()
 
-        # print(features[consts.INCEPTION_OUTPUT_FIELD])
+        print(features['_id'])
         print(features[consts.LABEL_ONE_HOT_FIELD])
         print(features['inception_output'].shape)
     # validate_train_data("/data/data/train_example.tfrecords", np.asarray([180, 180, 3]))
