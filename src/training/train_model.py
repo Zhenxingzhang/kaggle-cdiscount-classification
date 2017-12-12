@@ -81,6 +81,15 @@ def linear_model(model_layer_):
     return _x, _y, _y_
 
 
+def neural_model(model_layer_):
+    _x = tf.placeholder(dtype=tf.float32, shape=(None, model_layer_[0]), name="x")
+    _y = tf.placeholder(dtype=tf.int32, shape=(None), name="y")
+
+    hidden_1 = fc_layer(_x, input_dim=2048, output_dim=1024, layer_name='FC_1', act=tf.tanh)
+    _y_ = fc_layer(hidden_1, input_dim=1024, output_dim=5270, layer_name='FC_1', act=tf.identity)
+    return _x, _y, _y_
+
+
 def get_tfrecrods_files(input_):
     if input_.endswith(".tfrecord"):
         return [input_]
@@ -119,13 +128,12 @@ if __name__ == '__main__':
     print("Evaluation data {}".format(eval_files))
     print("Evaluation batch size {}".format(EVAL_BATCH_SIZE))
 
-
     with tf.Graph().as_default() as g, tf.Session().as_default() as sess:
         next_train_batch = get_data_iter(sess, training_files, batch_size=BATCH_SIZE)
 
         next_eval_batch = get_data_iter(sess, eval_files, batch_size=EVAL_BATCH_SIZE)
 
-        x, y, y_ = linear_model(MODEL_LAYERS)
+        x, y, y_ = neural_model(MODEL_LAYERS)
 
         ###
         # loss and eval functions
