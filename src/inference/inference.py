@@ -10,7 +10,7 @@ from src.models import denseNN
 from src.common import paths
 import argparse
 import yaml
-from src.training.train_model import linear_model
+from src.training.train_model import neural_model
 
 
 def infer_test(model_name, x_, output_probs_, batch_size, test_tfrecords_files, test_prediction_csv):
@@ -25,9 +25,11 @@ def infer_test(model_name, x_, output_probs_, batch_size, test_tfrecords_files, 
         tf.global_variables_initializer().run()
 
         saver = tf.train.Saver()
-        lines = open(os.path.join(paths.CHECKPOINTS_DIR, model_name + '_latest')).read().split('\n')
+        lines = open(os.path.join(paths.CHECKPOINTS_DIR, model_name, str(LEARNING_RATE),  model_name + '_latest')).read().split('\n')
         latest_checkpoint = [l.split(':')[1].replace('"', '').strip() for l in lines if 'model_checkpoint_path:' in l][0]
-        saver.restore(sess, os.path.join(paths.CHECKPOINTS_DIR, latest_checkpoint))
+        check_point_path = os.path.join(paths.CHECKPOINTS_DIR, model_name, str(LEARNING_RATE), latest_checkpoint)
+        print("Restore from {}".format(check_point_path))
+        saver.restore(sess, check_point_path)
 
         with open(test_prediction_csv, 'w') as csvfile:
             csv_writer = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
@@ -87,6 +89,7 @@ if __name__ == '__main__':
 
     MODEL_NAME = cfg["MODEL"]["MODEL_NAME"]
     MODEL_LAYERS = cfg["MODEL"]["MODEL_LAYERS"]
+    LEARNING_RATE = cfg["TRAIN"]["LEARNING_RATE"]
 
     print("Testing model name: {}".format(MODEL_NAME))
     print("Testing data: {}".format(TEST_TF_RECORDS))
@@ -95,7 +98,7 @@ if __name__ == '__main__':
     with tf.Graph().as_default():
         # x = tf.placeholder(dtype=tf.float32, shape=(consts.INCEPTION_CLASSES_COUNT, None), name="x")
         # _, output_probs, x, _, _ = denseNN.dense_neural_network(consts.HEAD_MODEL_LAYERS, gamma=0.01)
-        x, _, output_ = linear_model(MODEL_LAYERS)
+        x, _, output_ = neural_model(MODEL_LAYERS)
         output_probs = tf.nn.softmax(output_)
 
         print(output_probs.shape)

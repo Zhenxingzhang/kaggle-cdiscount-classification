@@ -6,7 +6,7 @@ TRAIN:
     BATCH_SIZE : 10
     EPOCHS_COUNT : 250
     LEARNING_RATE : 0.001
-    TRAIN_TF_RECORDS : "/data/data/train/tf_records"
+    TRAIN_TF_RECORDS : "/data/data/train_example.tfrecord"
 
     EVAL_BATCH_SIZE : 5
     EVAL_TF_RECORDS : "/data/data/train_example.tfrecord"
