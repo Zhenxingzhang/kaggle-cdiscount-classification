@@ -86,7 +86,7 @@ def neural_model(model_layer_):
     _y = tf.placeholder(dtype=tf.int32, shape=(None), name="y")
 
     hidden_1 = fc_layer(_x, input_dim=2048, output_dim=1024, layer_name='FC_1', act=tf.tanh)
-    _y_ = fc_layer(hidden_1, input_dim=1024, output_dim=5270, layer_name='FC_1', act=tf.identity)
+    _y_ = fc_layer(hidden_1, input_dim=1024, output_dim=5270, layer_name='FC_2', act=tf.identity)
     return _x, _y, _y_
 
 

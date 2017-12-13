@@ -7,14 +7,13 @@ from tensorflow.contrib.slim.nets import inception
 from PIL import Image
 from src.misc.ReadableLabel import ReadableLabel
 
-slim = tf.contrib.slim
 
 tf.flags.DEFINE_string(
     'master', '', 'The address of the TensorFlow master to use.')
 
 tf.flags.DEFINE_string(
     'checkpoint_path',
-    '/Users/zhenxingzhang/Documents/2017/kaggle-cdiscount-classification/data/inception-v3/',
+    '/data/inception/2016/',
     'Path to checkpoint for inception network.')
 
 tf.flags.DEFINE_string(
@@ -58,13 +57,15 @@ def load_images(input_dir, batch_shape):
 
 
 if __name__ == '__main__':
+    slim = tf.contrib.slim
+
     batch_shape = [FLAGS.batch_size_, FLAGS.image_height, FLAGS.image_width, 3]
     num_classes = 1001
     predictions = []
 
     tf.logging.set_verbosity(tf.logging.INFO)
 
-    node_lookup = ReadableLabel("data/inception-v3/imagenet1000_clsid_to_human.txt")
+    node_lookup = ReadableLabel("/data/inception/2016/imagenet1000_clsid_to_human.txt")
 
     with tf.Graph().as_default():
         latest_checkpoint = tf.train.latest_checkpoint(FLAGS.checkpoint_path)
