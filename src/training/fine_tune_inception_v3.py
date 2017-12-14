@@ -6,6 +6,9 @@ from src.common import paths
 from src.data_preparation import dataset
 from src.training.train_model import get_tfrecrods_files
 from src.common import consts
+from skimage.data import imread
+import io
+import numpy as np
 
 
 def get_data_iter(sess_, tf_records_paths_, buffer_size=20, batch_size=64):
@@ -15,42 +18,49 @@ def get_data_iter(sess_, tf_records_paths_, buffer_size=20, batch_size=64):
     return ds_iter.get_next()
 
 
+def decode_img(img_raw_):
+    img_ = np.array(imread(io.BytesIO(img_raw_)))
+    return img_ / 255.0 * 2.0 - 1.0
+
+
 if __name__ == '__main__':
-    batch_shape = [64, 299, 299, 3]
+    batch_shape = [20, 180, 180, 3]
     num_classes = 5270
     predictions = []
-    checkpoint_path = "/data/inception/2016/"
-    LEARNING_RATE = 0.0001
-    EPOCHS_COUNT = 10
-    MODEL_NAME = "inception_v3_cdiscount"
+    inception_checkpoint_path = "/data/inception/2016/"
+    LEARNING_RATE = 0.001
+    EPOCHS_COUNT = 50
+    MODEL_NAME = "Fine-Tune-Inception-V3-2016"
 
     TRAIN_TF_RECORDS = "/data/data/train_example_images.tfrecord"
-    BATCH_SIZE = 20
 
     training_files = get_tfrecrods_files(TRAIN_TF_RECORDS)
+
+    checkpoint_path = os.path.join(paths.CHECKPOINTS_DIR, MODEL_NAME, str(LEARNING_RATE), MODEL_NAME)
+
+    # Create parent path if it doesn't exist
+    if not os.path.isdir(checkpoint_path):
+        os.mkdir(checkpoint_path)
 
     slim = tf.contrib.slim
 
     with tf.Graph().as_default(), tf.Session().as_default() as sess:
 
-        next_train_batch = get_data_iter(sess, training_files, batch_size=BATCH_SIZE)
-
-        latest_checkpoint = tf.train.latest_checkpoint(checkpoint_path)
+        next_train_batch = get_data_iter(sess, training_files, batch_size=batch_shape[0])
 
         # Prepare graph
-        image_raw = tf.placeholder(dtype=tf.string, shape=None)
-        image = tf.image.decode_image(image_raw)
 
         x_input = tf.placeholder(tf.float32, shape=batch_shape)
         y = tf.placeholder(dtype=tf.int32, shape=(None), name="y")
 
         with slim.arg_scope(inception.inception_v3_arg_scope()):
             y_, end_points = inception.inception_v3(
-                x_input, num_classes=num_classes, is_training=True, dropout_keep_prob=0.8)
-        print(y_.shape)
+                x_input, num_classes=num_classes, is_training=True, dropout_keep_prob=1.0)
+            # exclude = ['InceptionV3/Logits', 'InceptionV3/AuxLogits']
+            # variables_to_restore = slim.get_variables_to_restore(exclude=exclude)
+            variables_to_save = slim.get_variables_to_restore()
 
-        exclude = ['InceptionV3/Logits', 'InceptionV3/AuxLogits']
-        variables_to_restore = slim.get_variables_to_restore(exclude=exclude)
+        print(y_.shape)
 
         with tf.name_scope('cross_entropy'):
             cross_entropy_i = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=y_)
@@ -77,30 +87,34 @@ if __name__ == '__main__':
         # sess.run(tf.global_variables_initializer()
         tf.global_variables_initializer().run()
 
-        saver = tf.train.Saver(variables_to_restore)
+        saver = tf.train.Saver()
+        #
+        # saver_write = tf.train.Saver(variables_to_save)
 
         # Restore previously trained variables from disk
         # Variables constructed in forward_pass() will be initialised with
         # values restored from variables with the same name
         # Note: variable names MUST match for it to work
-        print("Restoring Saved Variables from Checkpoint: {}".format(latest_checkpoint))
-        saver.restore(sess, latest_checkpoint)
+        # print("Restoring Saved Variables from Checkpoint: {}".format(latest_checkpoint))
+        # saver.restore(sess, latest_checkpoint)
 
         bar = pyprind.ProgBar(EPOCHS_COUNT, update_interval=1, width=60)
         for epoch in range(EPOCHS_COUNT):
             batch_examples = sess.run(next_train_batch)
             batch_ids = batch_examples['_id']
-            batch_images = batch_examples[consts.IMAGE_RAW_FIELD]
+            batch_images_raw = batch_examples[consts.IMAGE_RAW_FIELD]
+            batch_images = np.array(map(decode_img, batch_images_raw))
             batch_y = batch_examples[consts.LABEL_ONE_HOT_FIELD]
 
-            imgs = sess.run(image, feed_dict={image_raw: batch_images})
-            imgs.shape
-            # _, summary = sess.run([optimizer, merged], feed_dict={
-            #     x_input: batch_images,
-            #     y: batch_y
-            # })
-            #
-            # train_writer.add_summary(summary, epoch)
+            _, summary = sess.run([optimizer, merged], feed_dict={
+                x_input: batch_images,
+                y: batch_y
+            })
+
+            train_writer.add_summary(summary, epoch)
+
+            if epoch % 10 == 0 or epoch == EPOCHS_COUNT:
+                saver.save(sess, checkpoint_path, latest_filename=MODEL_NAME + '_latest')
 
             bar.update()
 

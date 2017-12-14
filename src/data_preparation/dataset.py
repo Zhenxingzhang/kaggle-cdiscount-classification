@@ -32,8 +32,8 @@ def read_record_to_queue(tf_record_name, shapes, preproc_func=None, num_epochs=1
                 # We know the length of both fields. If not the
                 # tf.VarLenFeature could be used
                 '_id': tf.FixedLenFeature([], tf.int64),
-                # consts.IMAGE_RAW_FIELD: tf.FixedLenFeature([], tf.string),
-                consts.INCEPTION_OUTPUT_FIELD: tf.FixedLenFeature([consts.INCEPTION_CLASSES_COUNT], tf.float32),
+                consts.IMAGE_RAW_FIELD: tf.FixedLenFeature([], tf.string),
+                # consts.INCEPTION_OUTPUT_FIELD: tf.FixedLenFeature([consts.INCEPTION_CLASSES_COUNT], tf.float32),
                 consts.LABEL_ONE_HOT_FIELD: tf.FixedLenFeature([], tf.int64)
             })
 
@@ -125,10 +125,27 @@ def read_test_tf_record(record):
         })
 
 
+def read_test_image_record(record):
+    return tf.parse_single_example(
+        record,
+        features={
+            '_id': tf.FixedLenFeature([], tf.int64),
+            consts.IMAGE_RAW_FIELD: tf.FixedLenFeature([], tf.string)
+            # consts.INCEPTION_OUTPUT_FIELD: tf.FixedLenFeature([consts.INCEPTION_CLASSES_COUNT], tf.float32),
+        })
+
+
 def test_features_dataset():
     file_names_ = tf.placeholder(tf.string)
     ds_ = tf.contrib.data.TFRecordDataset(file_names_, compression_type='ZLIB') \
         .map(read_test_tf_record)
+
+    return ds_, file_names_
+
+
+def test_image_dataset():
+    file_names_ = tf.placeholder(tf.string)
+    ds_ = tf.contrib.data.TFRecordDataset(file_names_, compression_type='ZLIB').map(read_test_image_record)
 
     return ds_, file_names_
 

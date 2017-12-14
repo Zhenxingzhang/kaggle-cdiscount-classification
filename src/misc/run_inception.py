@@ -81,7 +81,7 @@ if __name__ == '__main__':
         predicted_labels = tf.argmax(end_points['Predictions'], 1)
 
         # Run computation
-        saver = tf.train.Saver(slim.get_model_variables())
+        saver = tf.train.Saver(variables_to_restore)
         # saver = tf.train.Saver(tf.global_variables())
         # Start session
         with tf.Session() as sess:

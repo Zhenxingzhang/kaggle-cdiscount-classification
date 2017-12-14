@@ -35,13 +35,13 @@ def convert_bson_2_record(input_bson_filename, output_tfrecords_filename, n=None
             n_img = len(d['imgs'])
             for index in range(n_img):
                 img_raw = d['imgs'][index]['picture']
-                img = np.array(imread(io.BytesIO(img_raw)))
+                # img = np.array(imread(io.BytesIO(img_raw)))
                 # height = img.shape[0]
                 # width = img.shape[1]
                 product_id = d['_id']
                 _feature = {
                     '_id': int64_feature(product_id),
-                    consts.IMAGE_RAW_FIELD: bytes_feature(img.tostring())
+                    consts.IMAGE_RAW_FIELD: bytes_feature(img_raw)
                 }
                 if inception_feature:
                     inception_feature_ = get_inception_ouput(img_raw)
