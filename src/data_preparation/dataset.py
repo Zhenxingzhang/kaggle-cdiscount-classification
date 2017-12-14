@@ -7,6 +7,7 @@ from src.common import consts
 from os import listdir
 from os.path import isfile, join
 
+
 def read_record_to_queue(tf_record_name, shapes, preproc_func=None, num_epochs=10, batch_size=32,
                          capacity=2000, min_after_dequeue=1000):
     # this function return images_batch and labels_batch op that can be executed using sess.run
@@ -95,6 +96,25 @@ def features_dataset():
     return _ds, _file_names
 
 
+def read_train_image_record(record):
+    _features = tf.parse_single_example(
+        record,
+        features={
+            # We know the length of both fields. If not the
+            # tf.VarLenFeature could be used
+            '_id': tf.FixedLenFeature([], tf.int64),
+            consts.IMAGE_RAW_FIELD: tf.FixedLenFeature([], tf.string),
+            consts.LABEL_ONE_HOT_FIELD: tf.FixedLenFeature([], tf.int64)
+        })
+    return _features
+
+
+def image_dataset():
+    _file_names = tf.placeholder(tf.string)
+    _ds = tf.contrib.data.TFRecordDataset(_file_names, compression_type='ZLIB').map(read_train_image_record)
+    return _ds, _file_names
+
+
 def read_test_tf_record(record):
     return tf.parse_single_example(
         record,
@@ -121,11 +141,6 @@ def one_hot_label_encoder(csv_path=paths.CATEGORIES):
     def find_max_idx(lb_vec):
         _lb_vector = lb_vec.reshape(-1).tolist()
         return _lb_vector.index(max(_lb_vector))
-
-    # def label_vector(max_idx):
-    #     lb_vector = np.zeros(_lb.classes_.shape[0])
-    #     lb_vector[max_idx] = 1
-    #     return lb_vector
 
     def encode(lbs_str):
         _lbs_vector = np.asarray(_lb.transform(lbs_str), dtype=np.float32)

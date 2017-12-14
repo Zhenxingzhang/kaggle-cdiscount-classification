@@ -3,6 +3,17 @@ from tensorflow.contrib.slim.nets import inception
 import pyprind
 import os
 from src.common import paths
+from src.data_preparation import dataset
+from src.training.train_model import get_tfrecrods_files
+from src.common import consts
+
+
+def get_data_iter(sess_, tf_records_paths_, buffer_size=20, batch_size=64):
+    ds_, file_names_ = dataset.image_dataset()
+    ds_iter = ds_.shuffle(buffer_size).repeat().batch(batch_size).make_initializable_iterator()
+    sess_.run(ds_iter.initializer, feed_dict={file_names_: tf_records_paths_})
+    return ds_iter.get_next()
+
 
 if __name__ == '__main__':
     batch_shape = [64, 299, 299, 3]
@@ -10,21 +21,32 @@ if __name__ == '__main__':
     predictions = []
     checkpoint_path = "/data/inception/2016/"
     LEARNING_RATE = 0.0001
-    EPOCHS_COUNT = 5000
+    EPOCHS_COUNT = 10
     MODEL_NAME = "inception_v3_cdiscount"
+
+    TRAIN_TF_RECORDS = "/data/data/train_example_images.tfrecord"
+    BATCH_SIZE = 20
+
+    training_files = get_tfrecrods_files(TRAIN_TF_RECORDS)
 
     slim = tf.contrib.slim
 
     with tf.Graph().as_default(), tf.Session().as_default() as sess:
+
+        next_train_batch = get_data_iter(sess, training_files, batch_size=BATCH_SIZE)
+
         latest_checkpoint = tf.train.latest_checkpoint(checkpoint_path)
 
         # Prepare graph
+        image_raw = tf.placeholder(dtype=tf.string, shape=None)
+        image = tf.image.decode_image(image_raw)
+
         x_input = tf.placeholder(tf.float32, shape=batch_shape)
         y = tf.placeholder(dtype=tf.int32, shape=(None), name="y")
 
         with slim.arg_scope(inception.inception_v3_arg_scope()):
             y_, end_points = inception.inception_v3(
-              x_input, num_classes=num_classes, is_training=True, dropout_keep_prob=0.8)
+                x_input, num_classes=num_classes, is_training=True, dropout_keep_prob=0.8)
         print(y_.shape)
 
         exclude = ['InceptionV3/Logits', 'InceptionV3/AuxLogits']
@@ -66,5 +88,19 @@ if __name__ == '__main__':
 
         bar = pyprind.ProgBar(EPOCHS_COUNT, update_interval=1, width=60)
         for epoch in range(EPOCHS_COUNT):
+            batch_examples = sess.run(next_train_batch)
+            batch_ids = batch_examples['_id']
+            batch_images = batch_examples[consts.IMAGE_RAW_FIELD]
+            batch_y = batch_examples[consts.LABEL_ONE_HOT_FIELD]
+
+            imgs = sess.run(image, feed_dict={image_raw: batch_images})
+            imgs.shape
+            # _, summary = sess.run([optimizer, merged], feed_dict={
+            #     x_input: batch_images,
+            #     y: batch_y
+            # })
+            #
+            # train_writer.add_summary(summary, epoch)
+
             bar.update()
 
