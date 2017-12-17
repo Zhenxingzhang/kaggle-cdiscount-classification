@@ -101,9 +101,11 @@ if __name__ == '__main__':
         with slim.arg_scope(inception.inception_v3_arg_scope()):
             _, end_points = inception.inception_v3(x_input,
                                                     num_classes=5270,
-                                                    is_training=False,
+                                                    is_training=True,
                                                     dropout_keep_prob=1.0)
             variables_to_restore = slim.get_variables_to_restore()
+
+        saver = tf.train.Saver(variables_to_restore)
 
         predicted_labels = end_points['Predictions']
 
@@ -117,7 +119,6 @@ if __name__ == '__main__':
 
             tf.global_variables_initializer().run()
 
-            saver = tf.train.Saver()
             lines = open(os.path.join(paths.CHECKPOINTS_DIR, MODEL_NAME, str(LEARNING_RATE),
                                       MODEL_NAME + '_latest')).read().split('\n')
             latest_checkpoint = \

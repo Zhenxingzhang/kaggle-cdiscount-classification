@@ -29,7 +29,7 @@ if __name__ == '__main__':
     predictions = []
     inception_checkpoint_path = "/data/inception/2016/"
     LEARNING_RATE = 0.001
-    EPOCHS_COUNT = 50
+    EPOCHS_COUNT = 100
     MODEL_NAME = "Fine-Tune-Inception-V3-2016"
 
     TRAIN_TF_RECORDS = "/data/data/train_example_images.tfrecord"
@@ -115,6 +115,7 @@ if __name__ == '__main__':
 
             if epoch % 10 == 0 or epoch == EPOCHS_COUNT:
                 saver.save(sess, checkpoint_path, latest_filename=MODEL_NAME + '_latest')
+
 
             bar.update()
 

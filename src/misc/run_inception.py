@@ -78,6 +78,7 @@ if __name__ == '__main__':
               x_input, num_classes=num_classes, is_training=False, dropout_keep_prob=1.0)
             variables_to_restore = slim.get_variables_to_restore()
 
+        predicted_auxligits = tf.argmax(end_points['AuxLogits'], 1)
         predicted_labels = tf.argmax(end_points['Predictions'], 1)
 
         # Run computation
@@ -101,11 +102,11 @@ if __name__ == '__main__':
         #
         # with tf.train.MonitoredSession(session_creator=session_creator) as sess:
             for filenames, images in load_images(FLAGS.input_dir, batch_shape):
-                labels = sess.run(predicted_labels, feed_dict={x_input: images})
+                labels, auxlogits = sess.run([predicted_labels, predicted_auxligits], feed_dict={x_input: images})
 
                 for filename, label in zip(filenames, labels):
                     # true_label = image_labels.merge(pd.DataFrame({"ImageId":[filename[:-4]]}), on="ImageId")["TrueLabel"][0]
                     # predictions.append([filename[:-4], label])
-                    print(filename, label, node_lookup.get_human_readable(label))
+                    print(filename,auxlogits, label, node_lookup.get_human_readable(label))
 
     # pd.DataFrame(predictions, columns=["ImageId", "PredictedLabel"])#.to_csv("predictions.csv")
