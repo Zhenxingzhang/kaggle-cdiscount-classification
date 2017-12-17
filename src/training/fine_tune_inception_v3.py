@@ -9,7 +9,8 @@ from src.common import consts
 from skimage.data import imread
 import io
 import numpy as np
-
+import argparse
+import yaml
 
 def get_data_iter(sess_, tf_records_paths_, buffer_size=20, batch_size=64):
     ds_, file_names_ = dataset.image_dataset()
@@ -24,32 +25,55 @@ def decode_img(img_raw_):
 
 
 if __name__ == '__main__':
-    batch_shape = [20, 180, 180, 3]
+    parser = argparse.ArgumentParser(description='Default argument')
+    parser.add_argument('-c', dest="config_filename", type=str, required=True,
+                        help='the config file name must be provide')
+    args = parser.parse_args()
+
+    with open(args.config_filename, 'r') as yml_file:
+        cfg = yaml.load(yml_file)
+
+    BATCH_SIZE = cfg["TRAIN"]["BATCH_SIZE"]
+    EPOCHS_COUNT = cfg["TRAIN"]["EPOCHS_COUNT"]
+    LEARNING_RATE = cfg["TRAIN"]["LEARNING_RATE"]
+    TRAIN_TF_RECORDS = str(cfg["TRAIN"]["TRAIN_TF_RECORDS"])
+
+    EVAL_BATCH_SIZE = cfg["TRAIN"]["EVAL_BATCH_SIZE"]
+    EVAL_TF_RECORDS = str(cfg["TRAIN"]["EVAL_TF_RECORDS"])
+
+    MODEL_NAME = cfg["MODEL"]["MODEL_NAME"]
+
+    print(TRAIN_TF_RECORDS)
+    training_files = get_tfrecrods_files(TRAIN_TF_RECORDS)
+    eval_files = get_tfrecrods_files(EVAL_TF_RECORDS)
+
+    print("Training model {}".format(MODEL_NAME))
+    print("Training data {}".format(training_files))
+    print("Training batch size {}".format(BATCH_SIZE))
+
+    print("Evaluation data {}".format(eval_files))
+    print("Evaluation batch size {}".format(EVAL_BATCH_SIZE))
+
+    batch_shape = [None, 180, 180, 3]
     num_classes = 5270
-    predictions = []
     inception_checkpoint_path = "/data/inception/2016/"
-    LEARNING_RATE = 0.001
-    EPOCHS_COUNT = 100
-    MODEL_NAME = "Fine-Tune-Inception-V3-2016"
 
     TRAIN_TF_RECORDS = "/data/data/train_example_images.tfrecord"
-
-    training_files = get_tfrecrods_files(TRAIN_TF_RECORDS)
 
     checkpoint_path = os.path.join(paths.CHECKPOINTS_DIR, MODEL_NAME, str(LEARNING_RATE), MODEL_NAME)
 
     # Create parent path if it doesn't exist
     if not os.path.isdir(checkpoint_path):
-        os.mkdir(checkpoint_path)
+        print("Please create checkpoint path: {}".format(checkpoint_path))
 
     slim = tf.contrib.slim
 
     with tf.Graph().as_default(), tf.Session().as_default() as sess:
 
-        next_train_batch = get_data_iter(sess, training_files, batch_size=batch_shape[0])
+        next_train_batch = get_data_iter(sess, training_files, batch_size=BATCH_SIZE)
+        next_eval_batch = get_data_iter(sess, eval_files, batch_size=EVAL_BATCH_SIZE)
 
         # Prepare graph
-
         x_input = tf.placeholder(tf.float32, shape=batch_shape)
         y = tf.placeholder(dtype=tf.int32, shape=(None), name="y")
 
@@ -59,8 +83,6 @@ if __name__ == '__main__':
             # exclude = ['InceptionV3/Logits', 'InceptionV3/AuxLogits']
             # variables_to_restore = slim.get_variables_to_restore(exclude=exclude)
             variables_to_save = slim.get_variables_to_restore()
-
-        print(y_.shape)
 
         with tf.name_scope('cross_entropy'):
             cross_entropy_i = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=y_)
@@ -113,9 +135,18 @@ if __name__ == '__main__':
 
             train_writer.add_summary(summary, epoch)
 
-            if epoch % 10 == 0 or epoch == EPOCHS_COUNT:
+            if epoch % 100 == 0 or epoch == EPOCHS_COUNT:
+                eval_batch_examples = sess.run(next_eval_batch)
+                eval_batch_images_raw = eval_batch_examples[consts.IMAGE_RAW_FIELD]
+                eval_batch_images = np.array(map(decode_img, eval_batch_images_raw))
+                eval_batch_y = eval_batch_examples[consts.LABEL_ONE_HOT_FIELD]
+
+                dev_summaries = sess.run(merged, feed_dict={
+                    x_input: eval_batch_images,
+                    y: eval_batch_y
+                })
+                test_writer.add_summary(dev_summaries, epoch)
+
                 saver.save(sess, checkpoint_path, latest_filename=MODEL_NAME + '_latest')
 
-
             bar.update()
-

@@ -1,0 +1,18 @@
+MODEL:
+    MODEL_NAME : "Fine-Tune-Inception-V3-2016"
+    MODEL_LAYERS: [5270]
+
+TRAIN:
+    BATCH_SIZE : 256
+    EPOCHS_COUNT : 50000
+    LEARNING_RATE : 0.001
+    TRAIN_TF_RECORDS : "/data/data/train/split_8/images"
+
+    EVAL_BATCH_SIZE : 300
+    EVAL_TF_RECORDS : "/data/data/train/split_8/eval_images.tfrecord"
+
+
+TEST:
+    BATCH_SIZE : 20
+    TEST_TF_RECORDS : "/data/data/train_example_images.tfrecord"
+    OUTPUT_CSV_PATH : "/data/outputs/Fine-Tune-Inception-V3-2016_predict.csv"
