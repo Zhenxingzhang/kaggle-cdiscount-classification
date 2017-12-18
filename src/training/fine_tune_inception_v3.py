@@ -12,6 +12,7 @@ import numpy as np
 import argparse
 import yaml
 
+
 def get_data_iter(sess_, tf_records_paths_, buffer_size=20, batch_size=64):
     ds_, file_names_ = dataset.image_dataset()
     ds_iter = ds_.shuffle(buffer_size).repeat().batch(batch_size).make_initializable_iterator()
@@ -80,8 +81,8 @@ if __name__ == '__main__':
         with slim.arg_scope(inception.inception_v3_arg_scope()):
             y_, end_points = inception.inception_v3(
                 x_input, num_classes=num_classes, is_training=True, dropout_keep_prob=1.0)
-            # exclude = ['InceptionV3/Logits', 'InceptionV3/AuxLogits']
-            # variables_to_restore = slim.get_variables_to_restore(exclude=exclude)
+            exclude = ['InceptionV3/Logits', 'InceptionV3/AuxLogits']
+            variables_to_restore = slim.get_variables_to_restore(exclude=exclude)
             variables_to_save = slim.get_variables_to_restore()
 
         with tf.name_scope('cross_entropy'):
@@ -109,16 +110,17 @@ if __name__ == '__main__':
         # sess.run(tf.global_variables_initializer()
         tf.global_variables_initializer().run()
 
-        saver = tf.train.Saver()
-        #
-        # saver_write = tf.train.Saver(variables_to_save)
+        saver = tf.train.Saver(variables_to_restore)
 
         # Restore previously trained variables from disk
         # Variables constructed in forward_pass() will be initialised with
         # values restored from variables with the same name
         # Note: variable names MUST match for it to work
-        # print("Restoring Saved Variables from Checkpoint: {}".format(latest_checkpoint))
-        # saver.restore(sess, latest_checkpoint)
+        latest_checkpoint = tf.train.latest_checkpoint(inception_checkpoint_path)
+        print("Restoring Saved Variables from Checkpoint: {}".format(latest_checkpoint))
+        saver.restore(sess, latest_checkpoint)
+
+        saver_write = tf.train.Saver(variables_to_save)
 
         bar = pyprind.ProgBar(EPOCHS_COUNT, update_interval=1, width=60)
         for epoch in range(EPOCHS_COUNT):
@@ -135,7 +137,7 @@ if __name__ == '__main__':
 
             train_writer.add_summary(summary, epoch)
 
-            if epoch % 100 == 0 or epoch == EPOCHS_COUNT:
+            if epoch % 10 == 0 or epoch == EPOCHS_COUNT-1:
                 eval_batch_examples = sess.run(next_eval_batch)
                 eval_batch_images_raw = eval_batch_examples[consts.IMAGE_RAW_FIELD]
                 eval_batch_images = np.array(map(decode_img, eval_batch_images_raw))
@@ -147,6 +149,6 @@ if __name__ == '__main__':
                 })
                 test_writer.add_summary(dev_summaries, epoch)
 
-                saver.save(sess, checkpoint_path, latest_filename=MODEL_NAME + '_latest')
+                saver_write.save(sess, checkpoint_path, latest_filename=MODEL_NAME + '_latest')
 
             bar.update()

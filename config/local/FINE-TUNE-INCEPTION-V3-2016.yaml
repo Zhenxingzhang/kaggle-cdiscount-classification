@@ -4,8 +4,8 @@ MODEL:
 
 TRAIN:
     BATCH_SIZE : 10
-    EPOCHS_COUNT : 100
-    LEARNING_RATE : 0.001
+    EPOCHS_COUNT : 1000
+    LEARNING_RATE : 0.0001
     TRAIN_TF_RECORDS : "/data/data/train_example_images.tfrecord"
 
     EVAL_BATCH_SIZE : 30
