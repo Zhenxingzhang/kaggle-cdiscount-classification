@@ -90,5 +90,5 @@ if __name__ == "__main__":
 
     # random_sample_bson(args.full_bson_filename, args.subset_bson_filename,
     #                    n=args.total_records, number_random_example=args.number_of_random_records)
-    split_sample_bson(args.full_bson_filename, args.subset_bson_filename,
+    split_bson(args.full_bson_filename, args.subset_bson_filename,
                       n=args.total_records, split=args.number_of_random_records)
