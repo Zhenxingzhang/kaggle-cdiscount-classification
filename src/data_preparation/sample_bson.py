@@ -5,6 +5,39 @@ import argparse
 import os
 
 
+def split_bson(input_bson_filename, output_bson_filename_1, output_bson_filename_2, n, number_random_example):
+
+    data = bson.decode_file_iter(open(input_bson_filename, 'rb'))
+
+    random_items = random.sample(range(n), number_random_example)
+    random_items.sort()
+    print(random_items[0])
+    r_idx = 0
+    print(n)
+    with open(output_bson_filename_1, 'w+') as output:
+        for c, d in tqdm(enumerate(data), total=n):
+            if c != random_items[r_idx]:
+                continue
+            else:
+                # print("pick random item: {}".format(c))
+                # insert your code here.
+                output.write(BSON.encode(d))
+                r_idx = r_idx + 1
+                if r_idx == number_random_example:
+                   break
+    r_idx = 0
+    data = bson.decode_file_iter(open(input_bson_filename, 'rb'))
+    with open(output_bson_filename_2, 'w+') as output:
+        for c, d in tqdm(enumerate(data), total=n):
+            if r_idx<number_random_example and c == random_items[r_idx]:
+                r_idx = r_idx +1
+                continue
+            else:
+
+                output.write(BSON.encode(d))
+    print("Finish convert tfrecords with {} records".format(r_idx))
+
+
 def random_sample_bson(input_bson_filename, output_bson_filename,  n=100, number_random_example=10):
 
     data = bson.decode_file_iter(open(input_bson_filename, 'rb'))

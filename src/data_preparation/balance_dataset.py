@@ -3,6 +3,7 @@ import bson
 from tqdm import tqdm
 import random
 from bson import BSON
+from random import shuffle
 
 
 def random_keep_n_product(prod_list, r_size):
@@ -34,9 +35,21 @@ if __name__ == "__main__":
             else:
                 categories_idx[category_id] = list([d])
 
-        for key, value in categories_idx.iteritems():
-            sample_list = random_keep_n_product(value, 100)
-            for item in sample_list:
-                output.write(BSON.encode(item))
+        samples = []
 
-            print("Finished category: {}".format(key))
+        for key, value in categories_idx.iteritems():
+            sample_list = random_keep_n_product(value, 200)
+            samples.extend(sample_list)
+
+        for item in samples:
+            print(item['_id'])
+
+        print("random select {} training samples".format(len(samples)))
+
+        shuffle(samples)
+
+        for item in samples:
+            print(item['_id'])
+            output.write(BSON.encode(item))
+
+        print("Finished balance data.")

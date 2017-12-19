@@ -13,7 +13,7 @@ import argparse
 import yaml
 
 
-def get_data_iter(sess_, tf_records_paths_, buffer_size=20, batch_size=64):
+def get_data_iter(sess_, tf_records_paths_, buffer_size=20000, batch_size=64):
     ds_, file_names_ = dataset.image_dataset()
     ds_iter = ds_.shuffle(buffer_size).repeat().batch(batch_size).make_initializable_iterator()
     sess_.run(ds_iter.initializer, feed_dict={file_names_: tf_records_paths_})
@@ -61,7 +61,7 @@ if __name__ == '__main__':
 
     TRAIN_TF_RECORDS = "/data/data/train_example_images.tfrecord"
 
-    checkpoint_path = os.path.join(paths.CHECKPOINTS_DIR, MODEL_NAME, str(LEARNING_RATE), MODEL_NAME)
+    checkpoint_path = os.path.join(paths.CHECKPOINTS_DIR, MODEL_NAME, str(LEARNING_RATE))
 
     # Create parent path if it doesn't exist
     if not os.path.isdir(checkpoint_path):
