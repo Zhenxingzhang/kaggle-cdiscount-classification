@@ -3,6 +3,7 @@ Preprocessing for VGG
 """
 
 import tensorflow as tf
+from src.common import consts
 
 R_MEAN = 123.68
 G_MEAN = 116.78
@@ -13,6 +14,28 @@ CROP_WIDTH = 224
 
 RESIZE_SIDE_MIN = 256
 RESIZE_SIDE_MAX = 512
+
+
+def preprocess_tf_data(feature, is_training=False,
+                    resize_side_min=RESIZE_SIDE_MIN,
+                    resize_side_max=RESIZE_SIDE_MAX,
+                    output_height=CROP_HEIGHT,
+                    output_width=CROP_WIDTH):
+    '''
+    Read image from file
+    Preprocess image
+    Return image and label
+    '''
+    image = _decode_jpeg(feature[consts.IMAGE_RAW_FIELD])
+    label = feature[consts.LABEL_ONE_HOT_FIELD]
+
+    if (is_training):
+        return _preprocess_for_train(image, label, output_height,
+                                     output_width, resize_side_min,
+                                     resize_side_max)
+    else:
+        return _preprocess_for_val(image, label, output_height,
+                                   output_width, resize_side_min)
 
 
 def preprocess_data(filename, label, is_training=False,
@@ -36,11 +59,11 @@ def preprocess_data(filename, label, is_training=False,
                                    output_width, resize_side_min)
 
 
-def _decode_jpeg(filename):
+def _decode_jpeg(image_bytes_tensor):
     '''
     Read JPEG encoded bytes from file and decode to 3D float Tensor
     '''
-    image_bytes_tensor = tf.read_file(filename)
+    # image_bytes_tensor = tf.read_file(filename)
     image_decoded = tf.image.decode_jpeg(image_bytes_tensor, channels=3)
     return tf.image.convert_image_dtype(image_decoded, dtype=tf.float32)
 
