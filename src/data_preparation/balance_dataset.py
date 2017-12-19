@@ -24,32 +24,45 @@ if __name__ == "__main__":
     output_bson_filename = args.subset_bson_filename
     n = args.total_records
 
+    data = bson.decode_file_iter(open(input_bson_filename, 'rb'))
+    categories_idx = dict()
+
+    for c, d in tqdm(enumerate(data), total=n):
+        category_id = d['category_id']
+        if category_id in categories_idx:
+            categories_idx[category_id].append(c)
+        else:
+            categories_idx[category_id] = list([c])
+
+    sample_idxs = []
+
+    for key, value in categories_idx.iteritems():
+        sample_list = random_keep_n_product(value, 100)
+        sample_idxs.extend(sample_list)
+
+    # for item in sample_idxs:
+    #     print(item)
+    sample_idxs.sort()
+
+    samples = []
+    r_idx = 0
+    # print(sample_idxs[36])
+    data1 = bson.decode_file_iter(open(input_bson_filename, 'rb'))
+    for c, d in tqdm(enumerate(data1), total=n):
+        if c != sample_idxs[r_idx]:
+            continue
+        else:
+            samples.append(d)
+            r_idx = r_idx + 1
+            if r_idx == len(sample_idxs):
+                break
+
+    print("random select {} training samples".format(len(samples)))
+
     with open(output_bson_filename, 'w') as output:
-        data = bson.decode_file_iter(open(input_bson_filename, 'rb'))
-        categories_idx = dict()
-
-        for c, d in tqdm(enumerate(data), total=n):
-            category_id = d['category_id']
-            if category_id in categories_idx:
-                categories_idx[category_id].append(d)
-            else:
-                categories_idx[category_id] = list([d])
-
-        samples = []
-
-        for key, value in categories_idx.iteritems():
-            sample_list = random_keep_n_product(value, 200)
-            samples.extend(sample_list)
-
-        for item in samples:
-            print(item['_id'])
-
-        print("random select {} training samples".format(len(samples)))
-
         shuffle(samples)
 
         for item in samples:
-            print(item['_id'])
             output.write(BSON.encode(item))
 
         print("Finished balance data.")
