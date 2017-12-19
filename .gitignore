@@ -12,6 +12,7 @@ train.tfrecords
 output/*
 
 log/
+logs/
 
 # C extensions
 *.so

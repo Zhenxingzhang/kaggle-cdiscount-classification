@@ -111,7 +111,7 @@ def read_train_image_record(record):
 
 def image_dataset():
     _file_names = tf.placeholder(tf.string)
-    _ds = tf.contrib.data.TFRecordDataset(_file_names, compression_type='ZLIB').map(read_train_image_record)
+    _ds = tf.contrib.data.TFRecordDataset(_file_names, compression_type='ZLIB').map(read_train_image_record).map()
     return _ds, _file_names
 
 
