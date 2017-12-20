@@ -15,20 +15,20 @@ from src.data_preparation.tf_record_utils import bytes_feature, float_feature, i
 def convert_bson_2_record(input_bson_filename, output_tfrecords_filename, n=None, inception_feature=False):
     one_hot_encoder, _ = dataset.one_hot_label_encoder(csv_path="data/category_names.csv")
 
-    inception_graph = tf.Graph()
-    inception_sess = tf.Session(graph=inception_graph)
-
-    with inception_graph.as_default(), inception_sess.as_default():
-        inception_model = inception.inception_model()
+    # inception_graph = tf.Graph()
+    # inception_sess = tf.Session(graph=inception_graph)
+    #
+    # with inception_graph.as_default(), inception_sess.as_default():
+    #     inception_model = inception.inception_model()
 
     z = 0
     data = bson.decode_file_iter(open(input_bson_filename, 'rb'))
     opts = tf.python_io.TFRecordOptions(tf.python_io.TFRecordCompressionType.ZLIB)
 
-    def get_inception_ouput(img):
-        with inception_graph.as_default():
-            inception_output = inception_model(inception_sess, img).reshape(-1).tolist()
-        return inception_output
+    # def get_inception_ouput(img):
+    #     with inception_graph.as_default():
+    #         inception_output = inception_model(inception_sess, img).reshape(-1).tolist()
+    #     return inception_output
 
     with tf.python_io.TFRecordWriter(output_tfrecords_filename,  options=opts) as writer:
         for c, d in tqdm(enumerate(data), total=n):
@@ -43,9 +43,9 @@ def convert_bson_2_record(input_bson_filename, output_tfrecords_filename, n=None
                     '_id': int64_feature(product_id),
                     consts.IMAGE_RAW_FIELD: bytes_feature(img_raw)
                 }
-                if inception_feature:
-                    inception_feature_ = get_inception_ouput(img_raw)
-                    _feature[consts.INCEPTION_OUTPUT_FIELD] = float_feature(inception_feature_)
+                # if inception_feature:
+                #     inception_feature_ = get_inception_ouput(img_raw)
+                #     _feature[consts.INCEPTION_OUTPUT_FIELD] = float_feature(inception_feature_)
                 if 'category_id' in d:
                     _feature[consts.LABEL_ONE_HOT_FIELD] = int64_feature(int(one_hot_encoder([str(d['category_id'])])[0]))
                 example = tf.train.Example(features=tf.train.Features(feature=_feature))

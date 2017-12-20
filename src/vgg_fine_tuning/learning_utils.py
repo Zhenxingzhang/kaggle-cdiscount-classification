@@ -6,8 +6,8 @@ from tensorflow.python import pywrap_tensorflow
 import tensorflow as tf
 
 
-def restore_variables_from_checkpoint(sess, checkpoint_dir,
-                                      exclude=None, load_scope=None):
+def restore_variables_from_checkpoint(sess, checkpoint_dir, exclude=None,
+                                      load_scope=None, verbose=False):
     '''
     Resrote saved variables from file
     '''
@@ -22,11 +22,12 @@ def restore_variables_from_checkpoint(sess, checkpoint_dir,
     with tf.name_scope('load_variables'):
         saver = tf.train.Saver(vars_to_restore)
         ckpt = tf.train.get_checkpoint_state(checkpoint_dir)
-        _print_tensors(ckpt.model_checkpoint_path)
+        if verbose:
+            _print_tensors(ckpt.model_checkpoint_path)
         saver.restore(sess, ckpt.model_checkpoint_path)
 
 
-def initialize_remaining_variables(sess):
+def initialize_remaining_variables(sess, verbose=False):
     '''
     Initialize all variables that have not been restored
     '''
@@ -55,13 +56,14 @@ def initialize_remaining_variables(sess):
                        else 'not_trainable')
                 group_by_type[key][var.name.split('/')[-1]].append(var.name)
 
-            print("TRAINABLE Variables Initialised Automatically:")
-            for k, v in group_by_type['trainable'].items():
-                print(k)
+            if verbose:
+                print("TRAINABLE Variables Initialised Automatically:")
+                for k, v in group_by_type['trainable'].items():
+                    print(k)
 
-            print("NOT_TRAINABLE Variables Initialised Automatically:")
-            for k, v in group_by_type['not_trainable'].items():
-                print("{} (total: {})".format(k, len(v)))
+                print("NOT_TRAINABLE Variables Initialised Automatically:")
+                for k, v in group_by_type['not_trainable'].items():
+                    print("{} (total: {})".format(k, len(v)))
 
         # initialise using default initializers when required
         sess.run(tf.variables_initializer(needs_initialisation))

@@ -61,7 +61,7 @@ def accuracy(logits, labels):
     Add summary to track accuracy on TensorBoard
     Return boolean tensor for correct predictions
     '''
-    prediction = tf.to_int32(tf.argmax(logits, 1))
+    prediction = tf.to_int64(tf.argmax(logits, 1))
     correct_prediction = tf.equal(prediction, labels)
     accuracy_op = tf.reduce_mean(tf.cast(correct_prediction, tf.float32),
                                  name='accuracy_op')
@@ -69,7 +69,7 @@ def accuracy(logits, labels):
     return correct_prediction
 
 
-def evaluate(sess, data_init_op, accuracy_op, is_train=True):
+def evaluate(sess, data_init_op, accuracy_op, is_training_pl, is_training):
     '''
     Evaluate accuracy of model
     '''
@@ -82,14 +82,14 @@ def evaluate(sess, data_init_op, accuracy_op, is_train=True):
 
     while True:
         try:
-            acc = sess.run(accuracy_op, feed_dict={is_training: is_train})
+            acc = sess.run(accuracy_op, feed_dict={is_training_pl: is_training})
             num_correct += acc.sum()
             num_samples += acc.shape[0]
         except tf.errors.OutOfRangeError:
             break
     accuracy = float(num_correct) / num_samples
 
-    if is_train:
+    if is_training:
         print(("Train Accuracy: {:.4f} [timer: {:.2f}s]")
               .format(accuracy, time.time() - t0))
     else:
