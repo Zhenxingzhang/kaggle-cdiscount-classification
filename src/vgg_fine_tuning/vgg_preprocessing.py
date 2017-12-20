@@ -59,11 +59,11 @@ def preprocess_data(filename, label, is_training=False,
                                    output_width, resize_side_min)
 
 
-def _decode_jpeg(image_bytes_tensor):
+def _decode_jpeg(filename):
     '''
     Read JPEG encoded bytes from file and decode to 3D float Tensor
     '''
-    # image_bytes_tensor = tf.read_file(filename)
+    image_bytes_tensor = tf.read_file(filename)
     image_decoded = tf.image.decode_jpeg(image_bytes_tensor, channels=3)
     return tf.image.convert_image_dtype(image_decoded, dtype=tf.float32)
 
@@ -163,9 +163,9 @@ def _preprocess_for_val(image, label, output_height,
     # Centrally crop resized image to target dims
     crop_image = tf.image.resize_image_with_crop_or_pad(image, output_height,
                                                         output_width)
+    #
+    # # Subtract colour means
+    # preprocessed_image = _mean_image_subtraction(crop_image,
+    #                                              [R_MEAN, G_MEAN, B_MEAN])
 
-    # Subtract colour means
-    preprocessed_image = _mean_image_subtraction(crop_image,
-                                                 [R_MEAN, G_MEAN, B_MEAN])
-
-    return preprocessed_image, label
+    return crop_image, label

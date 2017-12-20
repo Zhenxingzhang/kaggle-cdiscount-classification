@@ -6,7 +6,7 @@ import tensorflow as tf
 from src.common import consts
 from os import listdir
 from os.path import isfile, join
-
+from src.vgg_fine_tuning.vgg_preprocessing import _preprocess_for_train, _preprocess_for_val
 
 def read_record_to_queue(tf_record_name, shapes, preproc_func=None, num_epochs=10, batch_size=32,
                          capacity=2000, min_after_dequeue=1000):
@@ -96,6 +96,15 @@ def features_dataset():
     return _ds, _file_names
 
 
+def _decode_jpeg(image_bytes_):
+    '''
+    Read JPEG encoded bytes from file and decode to 3D float Tensor
+    '''
+    image_decoded = tf.image.decode_jpeg(image_bytes_, channels=3)
+    return tf.image.convert_image_dtype(image_decoded, dtype=tf.float32)
+
+from PIL import Image
+
 def read_train_image_record(record):
     _features = tf.parse_single_example(
         record,
@@ -106,12 +115,15 @@ def read_train_image_record(record):
             consts.IMAGE_RAW_FIELD: tf.FixedLenFeature([], tf.string),
             consts.LABEL_ONE_HOT_FIELD: tf.FixedLenFeature([], tf.int64)
         })
+    _features["_image"], _ = _preprocess_for_val(_decode_jpeg(
+        _features[consts.IMAGE_RAW_FIELD]), None, 224, 224, 256)
+
     return _features
 
 
 def image_dataset():
     _file_names = tf.placeholder(tf.string)
-    _ds = tf.contrib.data.TFRecordDataset(_file_names, compression_type='ZLIB').map(read_train_image_record).map()
+    _ds = tf.contrib.data.TFRecordDataset(_file_names, compression_type='ZLIB').map(read_train_image_record)
     return _ds, _file_names
 
 

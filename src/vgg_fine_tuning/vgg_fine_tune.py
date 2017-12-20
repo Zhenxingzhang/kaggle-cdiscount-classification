@@ -20,6 +20,9 @@ from src.data_preparation import dataset
 from src.common import consts
 import numpy as np
 from src.vgg_fine_tuning.vgg_preprocessing import _decode_jpeg
+from skimage.data import imread
+import io
+from PIL import Image
 
 
 def get_data_iter(sess_, tf_records_paths_, buffer_size=200, batch_size=10):
@@ -27,18 +30,30 @@ def get_data_iter(sess_, tf_records_paths_, buffer_size=200, batch_size=10):
     ds_iter = ds_.shuffle(buffer_size).repeat().batch(batch_size).make_initializable_iterator()
     # return ds_iter
     sess_.run(ds_iter.initializer, feed_dict={file_names_: tf_records_paths_})
-    return ds_iter.get_next()
+    return ds_iter, file_names_, ds_iter.get_next()
+
+
+def decode_img(img_raw_):
+    # img_ = np.array(imread(io.BytesIO(img_raw_)))
+    # return img_ / 255.0 * 2.0 - 1.0
+    from PIL import Image
+    import StringIO
+    tempBuff = StringIO.StringIO()
+    tempBuff.write(img_raw_)
+    tempBuff.seek(0)  # need to jump back to the beginning before handing it off to PIL
+
+    return np.array(Image.open(tempBuff).resize((224, 224), Image.ANTIALIAS))
 
 
 # Silence compile warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 FLAGS = None
-NO_CLASSES = 8
+NO_CLASSES = 5270
 NO_THREADS = 4
 BATCH_SIZE = 10
 EVAL_BATCH_SIZE = 300
-DROPOUT_KEEP_PROB = 0.5
+DROPOUT_KEEP_PROB = 1.0
 WEIGHT_DECAY = 0.0005
 LEARNING_RATE = 0.001
 MOVING_AVERAGE_DECAY = 0.9999
@@ -86,7 +101,7 @@ def main(_):
         logits, _ = vgg_conv.inference(images, NO_CLASSES,
                                        DROPOUT_KEEP_PROB,
                                        WEIGHT_DECAY,
-                                       is_training=is_training)
+                                       is_training=True)
 
         # Add loss op to Graph
         loss_op = vgg_conv.loss(logits, labels)
@@ -102,11 +117,14 @@ def main(_):
         # Add accuracy op to Graph
         accuracy_op = vgg_conv.accuracy(logits, labels)
 
+        with tf.name_scope('input_images'):
+            tf.summary.image('input', images, 1)
+
     with tf.Session(graph=graph) as sess:
         training_files ="/data/data/train_example_images.tfrecord"
         eval_files = "/data/data/train_example_images.tfrecord"
-        next_train_batch = get_data_iter(sess, training_files, batch_size=BATCH_SIZE)
-        next_eval_batch = get_data_iter(sess, eval_files, batch_size=EVAL_BATCH_SIZE)
+        iter, train_files_ops, next_train_batch = get_data_iter(sess, training_files, batch_size=BATCH_SIZE)
+        _, _, next_eval_batch = get_data_iter(sess, eval_files, batch_size=EVAL_BATCH_SIZE)
 
         # image_strings = tf.placeholder(tf.string, shape=[None])
         # inputs_images = image_strings.map(_decode_jpeg)
@@ -133,34 +151,46 @@ def main(_):
         print("Training Last Fully Connected Layer:")
         for epoch in range(FLAGS.fc8_steps):
 
-            batch_examples = sess.run(next_train_batch)
-            batch_ids = batch_examples['_id']
-            batch_images_raw = batch_examples[consts.IMAGE_RAW_FIELD]
-            batch_images.map()
-            # batch_images = np.array(map(_decode_jpeg, batch_images_raw))
-            # batch_images = sess.run(inputs_images, feed_dict={image_strings: batch_images_raw})
-            batch_y = batch_examples[consts.LABEL_ONE_HOT_FIELD]
-
             print("Epoch {}/{}".format(epoch + 1, FLAGS.fc8_steps))
             # Initialise iterator with the training set
             # This will go through an entire epoch until iterator is empty
             # sess.run(train_init_op)
+            sess.run(iter.initializer, feed_dict={train_files_ops: training_files})
 
             count = 0
             while True:
                 try:
+                    batch_examples = sess.run(next_train_batch)
+                    batch_images_raw = batch_examples[consts.IMAGE_RAW_FIELD]
+                    # batch_images = np.array(map(decode_img, batch_images_raw))
+                    batch_images = batch_examples["_image"]
+                    # print(batch_images.shape)
+                    batch_y = batch_examples[consts.LABEL_ONE_HOT_FIELD]
+                    # print(batch_y)
                     # Train and write summaries
                     t0 = time.time()
                     summary, _, los = sess.run(
                         [summary_op, fc8_train_op, loss_op],
-                        feed_dict={is_training: True,
-                                   images: batch_images,
+                        feed_dict={images: batch_images,
                                    labels: batch_y})
 
                     summary_writer.add_summary(summary, count)
                     print(("Step: {}, Loss: {}, [timer: {:.2f}s]")
                           .format(count, los, time.time() - t0))
                     count += 1
+
+                    if count % 10 == 0:
+                        eval_batch_examples = sess.run(next_eval_batch)
+                        eval_batch_images = eval_batch_examples["_image"]
+                        eval_batch_y = eval_batch_examples[consts.LABEL_ONE_HOT_FIELD]
+
+                        [eval_summaries, eval_loss] = sess.run([summary_op, loss_op], feed_dict={
+                            images: eval_batch_images,
+                            labels: eval_batch_y})
+
+                        print(("Step: {}, Loss: {}, [timer: {:.2f}s]")
+                              .format(count, eval_loss, time.time() - t0))
+
                 except tf.errors.OutOfRangeError:
                     break
 
@@ -168,31 +198,51 @@ def main(_):
             # vgg_conv.evaluate(sess, train_init_op, accuracy_op, is_train=True)
             # vgg_conv.evaluate(sess, val_init_op, accuracy_op, is_train=False)
 
-        # # Train full model continuing with the same weights
-        # print("Training Full Model:")
-        # for epoch in range(FLAGS.steps):
-        #     print("Epoch {}/{}".format(epoch + 1, FLAGS.steps))
-        #     sess.run(train_init_op)
-        #
-        #     count = 0
-        #     while True:
-        #         try:
-        #             # Train and write summaries
-        #             t0 = time.time()
-        #             summary, _, los = sess.run(
-        #                 [summary_op, full_train_op, loss_op],
-        #                 feed_dict={is_training: True})
-        #
-        #             summary_writer.add_summary(summary, count)
-        #             print(("Step: {}, Loss: {}, [timer: {:.2f}s]")
-        #                   .format(count, los, time.time() - t0))
-        #             count += 1
-        #         except tf.errors.OutOfRangeError:
-        #             break
-        #
-        #     # Evaluate accuracy on train and val data every epoch
-        #     # vgg_conv.evaluate(sess, train_init_op, accuracy_op, is_train=True)
-        #     # vgg_conv.evaluate(sess, val_init_op, accuracy_op, is_train=False)
+        # Train full model continuing with the same weights
+        print("Training Full Model:")
+        for epoch in range(FLAGS.steps):
+            print("Epoch {}/{}".format(epoch + 1, FLAGS.steps))
+            sess.run(iter.initializer, feed_dict={train_files_ops: training_files})
+            count = 0
+            while True:
+                try:
+                    # Train and write summaries
+                    t0 = time.time()
+                    batch_examples = sess.run(next_train_batch)
+                    batch_images = batch_examples[consts.IMAGE_RAW_FIELD]
+                    print(batch_images.shape)
+                    batch_y = batch_examples[consts.LABEL_ONE_HOT_FIELD]
+
+                    summary, _, los = sess.run(
+                        [summary_op, full_train_op, loss_op],
+                        feed_dict={images: batch_images,
+                                   labels: batch_y})
+
+                    summary_writer.add_summary(summary, count)
+                    # print(("Step: {}, Loss: {}, [timer: {:.2f}s]")
+                    #       .format(count, los, time.time() - t0))
+                    count += 1
+
+                    if count % 10 == 0:
+                        eval_batch_examples = sess.run(next_eval_batch)
+                        eval_batch_images = eval_batch_examples["_image"]
+                        eval_batch_y = eval_batch_examples[consts.LABEL_ONE_HOT_FIELD]
+
+                        [eval_summaries, eval_loss] = sess.run([summary_op, loss_op], feed_dict={
+                            images: eval_batch_images,
+                            labels: eval_batch_y})
+
+                        print(("Step: {}, Loss: {}, [timer: {:.2f}s]")
+                              .format(count, eval_loss, time.time() - t0))
+                        # test_writer.add_summary(eval_summaries, epoch)
+                except tf.errors.OutOfRangeError:
+                    break
+
+
+
+            # Evaluate accuracy on train and val data every epoch
+            # vgg_conv.evaluate(sess, train_init_op, accuracy_op, is_train=True)
+            # vgg_conv.evaluate(sess, val_init_op, accuracy_op, is_train=False)
 
 
 if __name__ == '__main__':
@@ -204,14 +254,14 @@ if __name__ == '__main__':
                         default='/data/imagenet_vgg16/',
                         help='Path to checkpoint directory')
     parser.add_argument('--log_dir', type=str,
-                        default='logs/conv_coco',
+                        default='/data/summary/Fine-Tune-Vgg',
                         help='Path to log directory')
     parser.add_argument('--model_dir', type=str,
                         default='models/conv_coco',
                         help='Path to model directory')
-    parser.add_argument('--steps', type=int, default=10,
+    parser.add_argument('--steps', type=int, default=0,
                         help='Number of steps to run trainer')
-    parser.add_argument('--fc8_steps', type=int, default=5,
+    parser.add_argument('--fc8_steps', type=int, default=10,
                         help='Number of steps to run trainer on last layer')
 
     FLAGS, unparsed = parser.parse_known_args()
