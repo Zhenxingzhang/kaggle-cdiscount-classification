@@ -127,8 +127,13 @@ def _preprocess_for_val(image, label, output_height,
     # Centrally crop resized image to target dims
     crop_image = tf.image.resize_image_with_crop_or_pad(image, output_height,
                                                         output_width)
+    #
+    # # Subtract colour means
+    # preprocessed_image = _mean_image_subtraction(crop_image,
+    #                                              [R_MEAN, G_MEAN, B_MEAN])
 
     # Subtract colour means
     preprocessed_image = _mean_image_subtraction(crop_image,
                                                  [R_MEAN, G_MEAN, B_MEAN])
     return preprocessed_image, label
+

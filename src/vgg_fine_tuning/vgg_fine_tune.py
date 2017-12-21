@@ -17,6 +17,19 @@ import time
 import sys
 import os
 
+from src.data_preparation import dataset
+from src.common import consts
+import numpy as np
+from src.vgg_fine_tuning.vgg_preprocessing import _decode_jpeg
+
+
+def get_data_iter(sess_, tf_records_paths_, buffer_size=200, batch_size=10):
+    ds_, file_names_ = dataset.image_dataset()
+    ds_iter = ds_.shuffle(buffer_size).repeat().batch(batch_size).make_initializable_iterator()
+    # return ds_iter
+    sess_.run(ds_iter.initializer, feed_dict={file_names_: tf_records_paths_})
+    return ds_iter, file_names_, ds_iter.get_next()
+
 
 # Silence compile warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -27,6 +40,7 @@ NO_THREADS = 4
 BATCH_SIZE = 10
 EVAL_BATCH_SIZE = 30
 DROPOUT_KEEP_PROB = 1
+
 WEIGHT_DECAY = 0.0005
 LEARNING_RATE = 0.001
 TRAIN_TF_RECORDS = "/Users/sdaly/Downloads/train_example_images.tfrecord"
@@ -73,6 +87,7 @@ def main(_):
                                        DROPOUT_KEEP_PROB,
                                        WEIGHT_DECAY,
                                        is_training=is_training_pl)
+
 
         # Add loss op to Graph
         loss_op = vgg_conv.loss(logits, labels)
@@ -125,6 +140,13 @@ def main(_):
 
             while True:
                 try:
+                    batch_examples = sess.run(next_train_batch)
+                    batch_images_raw = batch_examples[consts.IMAGE_RAW_FIELD]
+                    # batch_images = np.array(map(decode_img, batch_images_raw))
+                    batch_images = batch_examples["_image"]
+                    # print(batch_images.shape)
+                    batch_y = batch_examples[consts.LABEL_ONE_HOT_FIELD]
+                    # print(batch_y)
                     # Train and write summaries
                     t0 = time.time()
                     summary, _, los = sess.run(
@@ -163,6 +185,7 @@ def main(_):
                     print(("Step: {}, Loss: {}, [timer: {:.2f}s]")
                           .format(step, los, time.time() - t0))
                     step += 1
+
                 except tf.errors.OutOfRangeError:
                     break
 
@@ -179,11 +202,12 @@ if __name__ == '__main__':
                         default='/Users/sdaly/Development/Kaggle/kaggle-cdiscount-classification/models/imagenet_vgg16',
                         help='Path to checkpoint directory')
     parser.add_argument('--log_dir', type=str,
-                        default='logs/conv_coco',
+                        default='/data/summary/Fine-Tune-Vgg',
                         help='Path to log directory')
     parser.add_argument('--steps', type=int, default=10,
+
                         help='Number of steps to run trainer')
-    parser.add_argument('--fc8_steps', type=int, default=5,
+    parser.add_argument('--fc8_steps', type=int, default=10,
                         help='Number of steps to run trainer on last layer')
 
     FLAGS, unparsed = parser.parse_known_args()

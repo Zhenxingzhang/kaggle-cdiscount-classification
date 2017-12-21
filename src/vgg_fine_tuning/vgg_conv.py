@@ -39,11 +39,11 @@ def loss(logits, labels, summaries=True):
         tf.summary.histogram('probabilities', tf.nn.sigmoid(logits))
 
     with tf.name_scope('loss'):
-        loss = tf.reduce_mean(
+        loss_ = tf.reduce_mean(
             tf.nn.sparse_softmax_cross_entropy_with_logits(
                 logits=logits, labels=labels))
-        tf.summary.scalar('loss', loss)
-    return loss
+        tf.summary.scalar('loss', loss_)
+    return loss_
 
 
 def train(loss, learning_rate, var_list=None):
@@ -66,7 +66,7 @@ def accuracy(logits, labels):
     accuracy_op = tf.reduce_mean(tf.cast(correct_prediction, tf.float32),
                                  name='accuracy_op')
     tf.summary.scalar('accuracy', accuracy_op)
-    return correct_prediction
+    return accuracy_op
 
 
 def evaluate(sess, data_init_op, accuracy_op, is_training_pl, is_training):

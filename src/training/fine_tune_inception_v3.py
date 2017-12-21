@@ -85,6 +85,9 @@ if __name__ == '__main__':
             variables_to_restore = slim.get_variables_to_restore(exclude=exclude)
             variables_to_save = slim.get_variables_to_restore()
 
+        with tf.name_scope('input_images'):
+            tf.summary.image('input', x_input, 1)
+
         with tf.name_scope('cross_entropy'):
             cross_entropy_i = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=y_)
             cross_entropy = tf.reduce_mean(cross_entropy_i)
