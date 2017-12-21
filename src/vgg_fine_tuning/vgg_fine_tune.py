@@ -16,11 +16,7 @@ import argparse
 import time
 import sys
 import os
-
 from src.data_preparation import dataset
-from src.common import consts
-import numpy as np
-from src.vgg_fine_tuning.vgg_preprocessing import _decode_jpeg
 
 
 def get_data_iter(sess_, tf_records_paths_, buffer_size=200, batch_size=10):
@@ -77,7 +73,7 @@ def main(_):
         images, labels = iterator.get_next()
 
         train_init_op = iterator.make_initializer(batched_train_data)
-        # val_init_op = iterator.make_initializer(batched_val_data)
+        val_init_op = iterator.make_initializer(batched_val_data)
 
         # Bool to indicate whether we are in training or test mode
         is_training_pl = tf.placeholder(tf.bool)
@@ -140,13 +136,6 @@ def main(_):
 
             while True:
                 try:
-                    batch_examples = sess.run(next_train_batch)
-                    batch_images_raw = batch_examples[consts.IMAGE_RAW_FIELD]
-                    # batch_images = np.array(map(decode_img, batch_images_raw))
-                    batch_images = batch_examples["_image"]
-                    # print(batch_images.shape)
-                    batch_y = batch_examples[consts.LABEL_ONE_HOT_FIELD]
-                    # print(batch_y)
                     # Train and write summaries
                     t0 = time.time()
                     summary, _, los = sess.run(
@@ -179,7 +168,7 @@ def main(_):
                     t0 = time.time()
                     summary, _, los = sess.run(
                         [summary_op, full_train_op, loss_op],
-                        feed_dict={is_training: True})
+                        feed_dict={is_training_pl: True})
 
                     summary_writer.add_summary(summary, step)
                     print(("Step: {}, Loss: {}, [timer: {:.2f}s]")

@@ -3,7 +3,6 @@ Preprocessing for VGG
 """
 
 import tensorflow as tf
-from src.common import consts
 
 R_MEAN = 123.68
 G_MEAN = 116.78
